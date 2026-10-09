@@ -22,6 +22,7 @@ public class AuthController {
         try {
             Usuario u = authService.registrar(
                     body.get("nombre"),
+                    body.get("apellido"),
                     body.get("email"),
                     body.get("password")
             );
@@ -44,6 +45,7 @@ public class AuthController {
         Map<String, Object> r = new HashMap<>();
         r.put("id", u.getId());
         r.put("nombre", u.getNombre());
+        r.put("apellido", u.getApellido());
         r.put("email", u.getEmail());
         r.put("rol", u.getRol());
         return r;

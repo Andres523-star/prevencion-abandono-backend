@@ -16,18 +16,19 @@ public class AuthService {
 
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    public Usuario registrar(String nombre, String email, String password) {
-        if (usuarioRepository.findByEmail(email).isPresent()) {
-            throw new RuntimeException("El email ya está registrado");
-        }
-        Usuario u = Usuario.builder()
-                .nombre(nombre)
-                .email(email)
-                .password(encoder.encode(password))
-                .rol("CONSEJERO")
-                .build();
-        return usuarioRepository.save(u);
+    public Usuario registrar(String nombre, String apellido, String email, String password) {
+    if (usuarioRepository.findByEmail(email).isPresent()) {
+        throw new RuntimeException("El email ya está registrado");
     }
+    Usuario u = Usuario.builder()
+            .nombre(nombre)
+            .apellido(apellido)
+            .email(email)
+            .password(encoder.encode(password))
+            .rol("CONSEJERO")
+            .build();
+    return usuarioRepository.save(u);
+}
 
     public Usuario login(String email, String password) {
         Optional<Usuario> opt = usuarioRepository.findByEmail(email);
