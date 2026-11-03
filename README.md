@@ -1,7 +1,7 @@
 # Backend — Plataforma de retención estudiantil
 
 Backend en **Java 21 + Spring Boot 3.5** (monolito modular con Spring Modulith) para detectar,
-predecir y prevenir la deserción estudiantil. Estado actual: **Fase 1 — fundaciones y seguridad base**.
+predecir y prevenir la deserción estudiantil. Estado actual: **Fase 2 — estructura académica, usuarios y estudiantes** (sobre la Fase 1 de seguridad base).
 
 > Proyecto desarrollado con asistencia de IA (Claude, Anthropic). Ver [BITACORA_IA.md](BITACORA_IA.md).
 
@@ -33,11 +33,14 @@ Pruebas completas (unitarias + integración + arquitectura + cobertura):
 | `users` | Usuarios internos, roles, alcance por programa | `UserDirectory`, `UserAccount`, `UserProvisioned` |
 | `audit` | Bitácora append-only particionada con hash encadenado | `@Audited`, `@SensitiveRead`, `AuditTrail` |
 | `settings` | Parámetros en caliente (sin redeploy) | `SettingsProvider`, `SettingChanged` |
+| `academic` | Programas, periodos, festivos, materias, grupos, horarios, sesiones y políticas de asistencia | `AcademicDirectory`, `AcademicCatalog`, `GroupTeacherChanged` |
+| `students` | Estudiante seudonimizado, identidad cifrada, perfil socioeconómico, inscripciones, consentimiento | `StudentRegistry`, `StudentInfo` |
+| `imports` | Importación CSV/Excel con dry-run, cola y reporte | solo REST |
 
 Capas por módulo: `api` → `application` → `domain` ← `infrastructure`. Límites verificados por
 `ModularityTest` (Modulith) y `ArchitectureRulesTest` (ArchUnit).
 
-## Endpoints de la Fase 1
+## Endpoints principales
 
 | Método y ruta | Acceso | Descripción |
 |---|---|---|
@@ -52,6 +55,17 @@ Capas por módulo: `api` → `application` → `domain` ← `infrastructure`. L�
 | `PUT /api/v1/users/{id}/status` | ADMIN | Activar / desactivar |
 | `GET/PUT /api/v1/settings[/{key}]` | ADMIN | Parámetros configurables |
 | `GET /api/v1/audit/verify` | ADMIN | Verifica la cadena de hashes |
+| `POST/PATCH/DELETE /api/v1/users[/{id}]` | ADMIN | Alta previa al primer ingreso, edición y borrado lógico |
+| `GET /api/v1/programs`, `/terms`, `/holidays` | autenticado | Catálogo y calendario (`POST /holidays/colombia/{año}` carga festivos) |
+| `POST /api/v1/subjects`, `/groups` | ADMIN, COORDINADOR (su programa) | Materias con prerrequisitos y grupos con horario |
+| `POST /api/v1/groups/{id}/sessions/generate` | ADMIN, COORDINADOR | Genera sesiones (sin festivos ni suspensiones) |
+| `PATCH /api/v1/sessions/{id}` | docente del grupo, COORDINADOR, ADMIN | Dictada / cancelada / reprogramada |
+| `GET/PUT /api/v1/{programs,subjects}/{id}/attendance-policy` | ADMIN, COORDINADOR | Políticas de asistencia (materia > práctica clínica > programa) |
+| `POST /api/v1/students`, `GET /students` | ADMIN, COORDINADOR / personal según alcance | Alta y listado seudonimizado |
+| `GET /api/v1/students/{id}/identity` | ADMIN, CONSEJERO, PSICOLOGO, COORDINADOR + `X-Access-Reason` | Identidad (auditada) |
+| `GET /api/v1/students/me` | ESTUDIANTE | Portal: mis datos |
+| `GET /api/v1/groups/{id}/roster` | docente del grupo y personal | Lista de clase (auditada) |
+| `POST /api/v1/imports` | ADMIN | Importación masiva (ver docs/importacion.md) |
 
 Errores siempre en `application/problem+json` con campo `code` estable.
 
@@ -61,4 +75,5 @@ Errores siempre en `application/problem+json` con campo `code` estable.
 - [Inicio de sesión con Supabase Auth](docs/supabase-auth.md)
 - [Despliegue en Render](docs/render-despliegue.md)
 - [Cuenta de emergencia (break-glass)](docs/break-glass.md)
+- [Importación masiva y datos sintéticos](docs/importacion.md)
 - Diagramas de módulos (PlantUML): `target/spring-modulith-docs/` tras `./mvnw verify`

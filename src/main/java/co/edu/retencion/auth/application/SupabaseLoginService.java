@@ -94,6 +94,8 @@ public class SupabaseLoginService {
         }
 
         UserAccount user = users.linkOrProvision(external.identity());
+        // Releer: al crearse la cuenta, otro módulo pudo vincularla (p. ej. con su registro de estudiante) y darle un rol.
+        user = users.findById(user.id()).orElse(user);
         boolean mfa = supabase.mfaAal().equals(external.aal());
         SessionTokens session = sessions.open(user, AuthMethod.SUPABASE, mfa);
         users.recordLogin(user.id());

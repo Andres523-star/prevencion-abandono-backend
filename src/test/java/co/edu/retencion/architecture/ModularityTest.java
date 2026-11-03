@@ -24,9 +24,9 @@ class ModularityTest {
     }
 
     @Test
-    void phaseOneModulesExist() {
+    void expectedModulesExist() {
         assertThat(MODULES.stream().map(ApplicationModule::getName))
-                .containsExactlyInAnyOrder("common", "auth", "users", "audit", "settings");
+                .containsExactlyInAnyOrder("common", "auth", "users", "audit", "settings", "academic", "students", "imports");
     }
 
     @Test

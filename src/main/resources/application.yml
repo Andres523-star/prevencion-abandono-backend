@@ -35,8 +35,11 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+          batch_size: 50
         timezone:
           default_storage: NORMALIZE_UTC
+        order_inserts: true
+        order_updates: true
   jackson:
     time-zone: UTC
     deserialization:
@@ -46,8 +49,9 @@ spring:
       enabled: true
   servlet:
     multipart:
-      max-file-size: 2MB
-      max-request-size: 2MB
+      # Las importaciones masivas admiten hasta 20 MB.
+      max-file-size: 20MB
+      max-request-size: 21MB
   modulith:
     events:
       # Las publicaciones completadas se borran para que el outbox no crezca sin límite.
@@ -62,7 +66,7 @@ server:
     include-stacktrace: never
     include-message: never
   tomcat:
-    max-swallow-size: 2MB
+    max-swallow-size: 21MB
     max-http-form-post-size: 64KB
 
 management:
@@ -150,6 +154,18 @@ app:
     partition-months-ahead: 3
   settings:
     cache-ttl: 30s
+  imports:
+    max-file-size: 20MB
+    # Hasta este tamaño se procesa en la misma petición; los más grandes quedan en cola.
+    sync-max-size: 256KB
+    poll-interval-ms: 2000
+    stale-after: 30m
+    # Alias extra de encabezados por campo (mapeo configurable de los datos reales), p. ej.:
+    # aliases:
+    #   documento: [num_identificacion, doc_estudiante]
+  synthetic:
+    enabled: false
+    students: 50000
   users:
     bootstrap-admin-emails: ${APP_BOOTSTRAP_ADMIN_EMAILS:}
     default-roles: ${APP_DEFAULT_ROLES_BY_DOMAIN:}

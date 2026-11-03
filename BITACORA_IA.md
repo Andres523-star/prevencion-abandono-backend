@@ -52,3 +52,24 @@ permitir el ingreso con cualquier correo.
 **Recomendación de la IA aceptada por defecto:** exigir correo verificado (`APP_REQUIRE_VERIFIED_EMAIL=true`).
 
 **Revisión humana:** pendiente por el equipo.
+
+### Fase 2 — Estructura académica, usuarios y estudiantes (2026-11-03)
+
+**Generado por IA:**
+- Módulo `academic`: 6 programas sembrados, periodos, festivos de Colombia calculados (Ley
+  Emiliani y Pascua), suspensiones de clase, materias con prerrequisitos (sin ciclos), grupos
+  regulares y de práctica clínica, horarios, generación idempotente de sesiones y políticas de
+  asistencia por programa / práctica clínica / materia administrables por API.
+- Módulo `students`: `anon_code` aleatorio (Base32 Crockford, 50 bits), identidad cifrada con
+  blind index de documento y correo, perfil socioeconómico restringido, inscripciones con cupo,
+  consentimiento con historial y vínculo automático usuario-estudiante por correo.
+- Gestión de usuarios: alta previa al primer ingreso, edición, listado por rol, borrado lógico y
+  validación de programas del coordinador.
+- Módulo `imports`: CSV/Excel, dry-run, cola con `SKIP LOCKED`, idempotencia, mapeo configurable,
+  reporte sin datos personales y plantillas.
+- Generador de datos sintéticos (Datafaker) de 50.000 estudiantes para el perfil dev.
+- Migración `V2__estructura_academica_y_estudiantes.sql`.
+- Pruebas: 74 unitarias/arquitectura + 94 de integración (incluye importación de 10.000 filas y
+  pruebas de ABAC por rol).
+
+**Revisión humana:** pendiente por el equipo.

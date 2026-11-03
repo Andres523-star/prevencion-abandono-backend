@@ -114,6 +114,14 @@ public class User {
         return user;
     }
 
+    /**
+     * Usuario creado por un ADMIN o por importación (p. ej. un docente) antes de su primer ingreso.
+     * Se vincula con su cuenta de Supabase la primera vez que entra con ese correo verificado.
+     */
+    public static User preProvision(String email, String emailBlindIndex, String displayName, Instant now) {
+        return provisionExternal(null, null, email, emailBlindIndex, displayName, now);
+    }
+
     /** Cuenta local de emergencia (sin correo institucional). */
     public static User createLocal(String label, Instant now) {
         User user = new User();
@@ -158,6 +166,36 @@ public class User {
     public void replacePrograms(Set<UUID> programs, Instant now) {
         programIds.clear();
         programIds.addAll(programs);
+        this.updatedAt = now;
+    }
+
+    /** Agrega un rol si no lo tiene. @return {@code true} si se agregó */
+    public boolean addRole(Role role, UUID grantedBy, Instant now) {
+        if (roles().contains(role)) {
+            return false;
+        }
+        roleGrants.add(new RoleGrant(role, now, grantedBy));
+        updatedAt = now;
+        return true;
+    }
+
+    /** @return {@code true} si el nombre cambió */
+    public boolean rename(String newDisplayName, Instant now) {
+        if (newDisplayName == null || newDisplayName.equals(displayName)) {
+            return false;
+        }
+        this.displayName = newDisplayName;
+        this.updatedAt = now;
+        return true;
+    }
+
+    /**
+     * Borrado lógico: la cuenta queda desactivada y fuera de todas las consultas, pero sus datos
+     * permanecen para la auditoría (no hay borrado físico sin proceso formal de supresión).
+     */
+    public void softDelete(Instant now) {
+        this.status = UserStatus.DISABLED;
+        this.deletedAt = now;
         this.updatedAt = now;
     }
 
