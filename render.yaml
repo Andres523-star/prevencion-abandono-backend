@@ -1,0 +1,97 @@
+# =====================================================================================
+# Blueprint de Render (Infraestructura como código). En Render: New → Blueprint → este repo.
+# Crea: PostgreSQL 16 gestionado, Key Value (compatible con Redis) y el backend en Docker.
+# Los secretos criptográficos se generan en Render (generateValue) y los de Supabase se
+# cargan a mano en el panel (sync: false). Nada sensible queda en el repositorio.
+# Asistido por IA (Claude, Anthropic). Ver BITACORA_IA.md.
+# =====================================================================================
+
+databases:
+  - name: retencion-db
+    plan: basic-1gb
+    region: virginia
+    databaseName: retencion
+    user: retencion_owner
+    postgresMajorVersion: "16"
+    # Sin acceso desde Internet: solo la red privada de Render.
+    ipAllowList: []
+
+services:
+  - type: keyvalue
+    name: retencion-redis
+    plan: starter
+    region: virginia
+    # El rate limit y los estados de login no deben desalojarse por memoria.
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+
+  - type: web
+    name: retencion-backend
+    runtime: docker
+    plan: standard
+    region: virginia
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health/readiness
+    autoDeployTrigger: checksPass
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+      targetCPUPercent: 70
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      # --- Base de datos (red privada)
+      - key: DB_HOST
+        fromDatabase:
+          name: retencion-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: retencion-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: retencion-db
+          property: database
+      - key: DB_APP_USER
+        fromDatabase:
+          name: retencion-db
+          property: user
+      - key: DB_APP_PASSWORD
+        fromDatabase:
+          name: retencion-db
+          property: password
+      - key: DB_POOL_MAX
+        value: "15"
+      # --- Estado compartido entre instancias
+      - key: APP_STATE_BACKEND
+        value: redis
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: retencion-redis
+          property: connectionString
+      # --- Secretos generados por Render (256 bits en Base64). NO regenerar: se perderían los datos cifrados.
+      - key: APP_JWT_SECRET
+        generateValue: true
+      - key: APP_CRYPTO_MASTER_KEY
+        generateValue: true
+      - key: APP_CRYPTO_BLIND_INDEX_KEY
+        generateValue: true
+      # --- Configuración que se completa en el panel de Render
+      - key: APP_CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: APP_ALLOWED_EMAIL_DOMAINS
+        sync: false
+      - key: APP_BOOTSTRAP_ADMIN_EMAILS
+        sync: false
+      - key: APP_DEFAULT_ROLES_BY_DOMAIN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: APP_REQUIRE_VERIFIED_EMAIL
+        value: "true"
+      - key: OPENAPI_ENABLED
+        value: "false"

@@ -1,0 +1,22 @@
+# Perfil de desarrollo local (docker compose up). Los secretos vienen de .env.
+spring:
+  jpa:
+    show-sql: false
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+app:
+  security:
+    cors:
+      allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+  state:
+    backend: ${APP_STATE_BACKEND:redis}
+    redis-url: ${REDIS_URL:redis://localhost:6379}
+
+logging:
+  level:
+    co.edu.retencion: DEBUG

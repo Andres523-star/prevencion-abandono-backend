@@ -1,0 +1,170 @@
+# =====================================================================================
+# Configuración común a todos los perfiles. Valores sensibles SOLO por variables de entorno
+# (ver .env.example). Perfiles: dev (local), test (pruebas), prod (Render / nube).
+# Asistido por IA (Claude, Anthropic). Ver BITACORA_IA.md.
+# =====================================================================================
+spring:
+  application:
+    name: retencion-backend
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:retencion}?sslmode=${DB_SSLMODE:prefer}
+    username: ${DB_APP_USER:retencion_app}
+    password: ${DB_APP_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      # Hikari recibe milisegundos.
+      connection-timeout: 10000
+      max-lifetime: 1800000
+      pool-name: retencion-pool
+  flyway:
+    # Flyway migra con un usuario dueño del esquema; la app usa un rol con menos privilegios.
+    user: ${DB_MIGRATION_USER:${DB_APP_USER:retencion_app}}
+    password: ${DB_MIGRATION_PASSWORD:${DB_APP_PASSWORD:}}
+    placeholders:
+      appDbRole: ${DB_APP_ROLE:retencion_app}
+    validate-on-migrate: true
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        timezone:
+          default_storage: NORMALIZE_UTC
+  jackson:
+    time-zone: UTC
+    deserialization:
+      fail-on-unknown-properties: true
+  mvc:
+    problemdetails:
+      enabled: true
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 2MB
+  modulith:
+    events:
+      # Las publicaciones completadas se borran para que el outbox no crezca sin límite.
+      completion-mode: delete
+      republish-outstanding-events-on-restart: true
+
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  max-http-request-header-size: 16KB
+  error:
+    include-stacktrace: never
+    include-message: never
+  tomcat:
+    max-swallow-size: 2MB
+    max-http-form-post-size: 64KB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+      roles: ADMIN
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+  metrics:
+    tags:
+      application: retencion-backend
+  tracing:
+    enabled: ${OTEL_TRACING_ENABLED:false}
+    sampling:
+      probability: ${OTEL_SAMPLING_PROBABILITY:0.1}
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+springdoc:
+  api-docs:
+    enabled: ${OPENAPI_ENABLED:false}
+  swagger-ui:
+    enabled: ${OPENAPI_ENABLED:false}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      supabase:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        record-failure-predicate: co.edu.retencion.auth.infrastructure.supabase.SupabaseFailurePredicate
+
+app:
+  http:
+    trusted-proxy-hops: ${APP_TRUSTED_PROXY_HOPS:0}
+    client-ip-header: ${APP_CLIENT_IP_HEADER:}
+  security:
+    jwt:
+      issuer: ${APP_JWT_ISSUER:retencion-backend}
+      audience: ${APP_JWT_AUDIENCE:retencion-api}
+      secret: ${APP_JWT_SECRET:}
+      access-token-ttl: ${APP_JWT_ACCESS_TTL:15m}
+    cors:
+      allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:}
+  rate-limit:
+    enabled: ${APP_RATE_LIMIT_ENABLED:true}
+    per-ip:
+      capacity: ${APP_RATE_LIMIT_IP_CAPACITY:300}
+      period: 1m
+    per-user:
+      capacity: ${APP_RATE_LIMIT_USER_CAPACITY:600}
+      period: 1m
+    sensitive:
+      capacity: ${APP_RATE_LIMIT_AUTH_CAPACITY:20}
+      period: 1m
+    sensitive-paths: /api/v1/auth/
+  state:
+    backend: ${APP_STATE_BACKEND:memory}
+    redis-url: ${REDIS_URL:}
+  crypto:
+    kms-type: ${APP_KMS_TYPE:local}
+    blind-index-key: ${APP_CRYPTO_BLIND_INDEX_KEY:}
+    local:
+      active-key-id: ${APP_CRYPTO_ACTIVE_KEY_ID:local-v1}
+      master-key: ${APP_CRYPTO_MASTER_KEY:}
+      previous-keys: ${APP_CRYPTO_PREVIOUS_KEYS:}
+    vault:
+      uri: ${VAULT_URI:}
+      token: ${VAULT_TOKEN:}
+      key-name: ${VAULT_TRANSIT_KEY:retencion-pii}
+  audit:
+    partition-months-ahead: 3
+  settings:
+    cache-ttl: 30s
+  users:
+    bootstrap-admin-emails: ${APP_BOOTSTRAP_ADMIN_EMAILS:}
+    default-roles: ${APP_DEFAULT_ROLES_BY_DOMAIN:}
+  auth:
+    # Vacío = se acepta cualquier dominio de correo.
+    allowed-email-domains: ${APP_ALLOWED_EMAIL_DOMAINS:}
+    refresh-token-ttl: ${APP_REFRESH_TTL:8h}
+    session-max-lifetime: ${APP_SESSION_MAX_LIFETIME:24h}
+    supabase:
+      url: ${SUPABASE_URL:}
+      anon-key: ${SUPABASE_ANON_KEY:}
+      jwt-secret: ${SUPABASE_JWT_SECRET:}
+      require-verified-email: ${APP_REQUIRE_VERIFIED_EMAIL:true}
+    break-glass:
+      enabled: ${BREAK_GLASS_ENABLED:false}
+      username: ${BREAK_GLASS_USERNAME:}
+      password-hash: ${BREAK_GLASS_PASSWORD_HASH:}
+      totp-secret: ${BREAK_GLASS_TOTP_SECRET:}

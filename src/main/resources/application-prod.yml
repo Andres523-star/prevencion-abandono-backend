@@ -1,0 +1,17 @@
+# Perfil de producción (Render u otra nube). Todo secreto llega por variables de entorno.
+server:
+  # Render termina TLS en su proxy: Tomcat toma la IP real y el esquema https de X-Forwarded-*.
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      internal-proxies: ${APP_INTERNAL_PROXIES_REGEX:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}}
+
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:20}
+
+app:
+  state:
+    # Con varias instancias, rate limit y estados de login deben compartirse en Redis.
+    backend: ${APP_STATE_BACKEND:redis}
