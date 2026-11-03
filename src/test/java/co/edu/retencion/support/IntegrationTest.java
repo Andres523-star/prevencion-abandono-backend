@@ -3,6 +3,7 @@ package co.edu.retencion.support;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -128,5 +129,78 @@ public abstract class IntegrationTest {
 
     protected static String bearer(Tokens tokens) {
         return "Bearer " + tokens.accessToken();
+    }
+
+    // ------------------------------------------------------------------ utilidades de la Fase 2
+
+    /** Programas sembrados por la migración V2. */
+    protected static final UUID ENF = UUID.fromString("0195f000-0000-7000-8000-000000000001");
+    protected static final UUID MED = UUID.fromString("0195f000-0000-7000-8000-000000000002");
+    protected static final UUID DER = UUID.fromString("0195f000-0000-7000-8000-000000000003");
+    protected static final UUID ISW = UUID.fromString("0195f000-0000-7000-8000-000000000004");
+
+    protected static String uniqueCode(String prefix) {
+        return prefix + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+    }
+
+    protected ResultActions postJson(String path, Tokens tokens, Object body) throws Exception {
+        return mvc.perform(post(path).header("Authorization", bearer(tokens))
+                .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body)));
+    }
+
+    protected JsonNode read(ResultActions actions) throws Exception {
+        return json.readTree(actions.andReturn().getResponse().getContentAsString());
+    }
+
+    protected UUID createTerm(Tokens admin) throws Exception {
+        return UUID.fromString(read(postJson("/api/v1/terms", admin, java.util.Map.of(
+                "code", uniqueCode("T-"), "name", "Periodo de prueba", "startDate", "2026-08-03",
+                "endDate", "2026-11-27", "status", "ACTIVE"))
+                .andExpect(status().isCreated())).get("id").asText());
+    }
+
+    protected UUID createSubject(Tokens admin, UUID programId) throws Exception {
+        return UUID.fromString(read(postJson("/api/v1/subjects", admin, java.util.Map.of(
+                "programId", programId, "code", uniqueCode("S-"), "name", "Materia de prueba", "credits", 3,
+                "suggestedSemester", 1, "prerequisiteIds", List.of()))
+                .andExpect(status().isCreated())).get("id").asText());
+    }
+
+    /** Grupo regular con clase los lunes y miércoles de 7 a 9. */
+    protected UUID createGroup(Tokens admin, UUID subjectId, UUID termId, UUID teacherId, int capacity)
+            throws Exception {
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("subjectId", subjectId);
+        body.put("termId", termId);
+        body.put("code", uniqueCode("G"));
+        body.put("teacherUserId", teacherId);
+        body.put("capacity", capacity);
+        body.put("groupType", "REGULAR");
+        body.put("schedule", List.of(
+                java.util.Map.of("day", "MONDAY", "start", "07:00", "end", "09:00", "room", "A-101"),
+                java.util.Map.of("day", "WEDNESDAY", "start", "07:00", "end", "09:00", "room", "A-101")));
+        return UUID.fromString(read(postJson("/api/v1/groups", admin, body).andExpect(status().isCreated()))
+                .get("id").asText());
+    }
+
+    /** Registra un estudiante activo; {@code email} puede ser {@code null}. */
+    protected UUID createStudent(Tokens admin, UUID programId, String email) throws Exception {
+        java.util.Map<String, Object> identity = new java.util.HashMap<>();
+        identity.put("fullName", "Estudiante de Prueba");
+        identity.put("documentType", "CC");
+        identity.put("documentNumber", String.valueOf(1_000_000_000L + (long) (Math.random() * 8_999_999_999L)));
+        identity.put("email", email);
+        identity.put("phone", "3001234567");
+        return UUID.fromString(read(postJson("/api/v1/students", admin, java.util.Map.of(
+                "identity", identity, "programId", programId, "currentSemester", 2, "status", "ACTIVO",
+                "admissionDate", "2025-08-01",
+                "socioeconomic", java.util.Map.of("stratum", 2, "works", true, "dependents", 0,
+                        "transportMode", "TRANSPORTE_PUBLICO")))
+                .andExpect(status().isCreated())).get("id").asText());
+    }
+
+    protected void enroll(Tokens admin, UUID studentId, UUID groupId) throws Exception {
+        postJson("/api/v1/students/" + studentId + "/enrollments", admin, java.util.Map.of("groupId", groupId))
+                .andExpect(status().isCreated());
     }
 }

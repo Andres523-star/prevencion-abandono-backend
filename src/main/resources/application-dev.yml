@@ -16,6 +16,10 @@ app:
   state:
     backend: ${APP_STATE_BACKEND:redis}
     redis-url: ${REDIS_URL:redis://localhost:6379}
+  synthetic:
+    # APP_SYNTHETIC_ENABLED=true genera 50.000 estudiantes de prueba al arrancar (si la BD está vacía).
+    enabled: ${APP_SYNTHETIC_ENABLED:false}
+    students: ${APP_SYNTHETIC_STUDENTS:50000}
 
 logging:
   level:

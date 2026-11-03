@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import co.edu.retencion.common.crypto.BlindIndexer;
+import co.edu.retencion.common.data.UpsertOutcome;
 import co.edu.retencion.common.error.DomainException;
 import co.edu.retencion.common.security.Role;
 import co.edu.retencion.users.AuthType;
@@ -77,6 +78,9 @@ public class UserDirectoryService implements UserDirectory {
         }
 
         // 3) Primer ingreso: se crea sin roles salvo las reglas de arranque configuradas.
+        if (users.existsByEmailIndexIncludingDeleted(emailIndex)) {
+            throw new DomainException(UsersProblems.IDENTITY_CONFLICT, "La cuenta con ese correo fue eliminada");
+        }
         User user = User.provisionExternal(identity.issuer(), identity.subject(), identity.email(), emailIndex,
                 identity.displayName(), now);
         user.replaceRoles(policy.initialRoles(identity.email()), null, now);
@@ -100,6 +104,52 @@ public class UserDirectoryService implements UserDirectory {
     @Transactional
     public void recordLogin(UUID userId) {
         users.findById(userId).ifPresent(u -> u.recordLogin(clock.instant()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UUID> findIdByEmail(String email) {
+        return findIdByEmailIndex(blindIndexer.index(BlindIndexer.Type.EMAIL, email));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UUID> findIdByEmailIndex(String emailBlindIndex) {
+        return users.findByEmailBlindIndex(emailBlindIndex).map(User::getId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<String> emailBlindIndexOf(UUID userId) {
+        return users.findById(userId).map(User::getEmailBlindIndex);
+    }
+
+    @Override
+    @Transactional
+    public void grantRole(UUID userId, Role role, UUID grantedBy) {
+        users.findById(userId).ifPresent(u -> u.addRole(role, grantedBy, clock.instant()));
+    }
+
+    @Override
+    @Transactional
+    public StaffUpsert upsertStaff(String email, String displayName, Role role, UUID grantedBy) {
+        Instant now = clock.instant();
+        String index = blindIndexer.index(BlindIndexer.Type.EMAIL, email);
+        Optional<User> existing = users.findByEmailBlindIndex(index);
+        if (existing.isPresent()) {
+            User user = existing.get();
+            boolean changed = user.addRole(role, grantedBy, now);
+            changed |= user.rename(displayName, now);
+            return new StaffUpsert(user.getId(), changed ? UpsertOutcome.UPDATED : UpsertOutcome.UNCHANGED);
+        }
+        if (users.existsByEmailIndexIncludingDeleted(index)) {
+            throw new DomainException(UsersProblems.IDENTITY_CONFLICT, "Existe un usuario eliminado con ese correo");
+        }
+        User user = User.preProvision(email.trim().toLowerCase(java.util.Locale.ROOT), index, displayName, now);
+        user.addRole(role, grantedBy, now);
+        users.save(user);
+        events.publishEvent(new UserProvisioned(user.getId(), AuthType.SUPABASE));
+        return new StaffUpsert(user.getId(), UpsertOutcome.CREATED);
     }
 
     static UserAccount toAccount(User user) {

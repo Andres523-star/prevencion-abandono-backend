@@ -4,11 +4,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import co.edu.retencion.common.data.UpsertOutcome;
 import co.edu.retencion.common.security.Role;
 
 /**
- * Puerta de entrada pública al módulo de usuarios. La usa el módulo auth para vincular
- * identidades de Supabase Auth y abrir sesiones.
+ * Puerta de entrada pública al módulo de usuarios. La usan auth (vincular identidades y abrir
+ * sesiones), academic (validar docentes), students (vincular usuario-estudiante) e imports.
+ * Nunca devuelve datos personales en claro.
  */
 public interface UserDirectory {
 
@@ -26,4 +28,29 @@ public interface UserDirectory {
     UserAccount createLocalAccount(String label, Set<Role> roles);
 
     void recordLogin(UUID userId);
+
+    /** Usuario con ese correo (se busca por blind index; el correo no se guarda en claro). */
+    Optional<UUID> findIdByEmail(String email);
+
+    /** Usuario cuyo correo tiene ese blind index (permite enlazar con la identidad del estudiante). */
+    Optional<UUID> findIdByEmailIndex(String emailBlindIndex);
+
+    /** Blind index del correo del usuario (HMAC, no reversible). */
+    Optional<String> emailBlindIndexOf(UUID userId);
+
+    /** Otorga un rol de forma programática (p. ej. ESTUDIANTE al vincularse con su registro). */
+    void grantRole(UUID userId, Role role, UUID grantedBy);
+
+    /**
+     * Crea o actualiza personal por correo (clave natural), p. ej. docentes importados. Solo agrega
+     * el rol indicado; nunca quita roles existentes.
+     */
+    StaffUpsert upsertStaff(String email, String displayName, Role role, UUID grantedBy);
+
+    /**
+     * @param userId  usuario creado o existente
+     * @param outcome creado, actualizado o sin cambios
+     */
+    record StaffUpsert(UUID userId, UpsertOutcome outcome) {
+    }
 }

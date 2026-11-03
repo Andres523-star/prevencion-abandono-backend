@@ -9,6 +9,7 @@ Requisito del proyecto: aplicar los **5 patrones creacionales** y, de los estruc
 |---|---|---|
 | **Singleton** | `common.id.UuidV7` | Generador único de UUID v7 por proceso: guarda el último milisegundo y un contador para que los ids sean estrictamente crecientes. Implementado como `enum` (forma recomendada en Java). |
 | **Factory Method** | `common.crypto.KmsProviderFactory` (`Local`, `Vault`) | Cada fábrica concreta decide qué `KmsProvider` construir según `app.crypto.kms-type`. Agregar OCI Vault o AWS KMS = nueva fábrica, sin tocar `CryptoConfig`. |
+| **Factory Method** | `imports.infrastructure.TableReader.forFormat` | Decide qué lector construir (CSV o Excel) según el formato detectado por *magic bytes*. |
 | **Abstract Factory** | `common.state.DistributedStateFactory` (`InMemoryStateFactory`, `RedisStateFactory`) | Crea una *familia* coherente de componentes de estado compartido (rate limiter + almacén de tickets de un solo uso y anti-replay): todos en memoria (dev/test) o todos en Redis (producción con varias instancias). |
 | **Builder** | `audit.domain.AuditEntry.Builder` | Una entrada de auditoría tiene muchos campos opcionales (actor, IP, motivo, entidad); el builder evita constructores con una docena de parámetros y valida los obligatorios. |
 | **Prototype** | `common.error.ApiProblem` + `common.error.ProblemCatalog` | El catálogo guarda una plantilla de error por código (tipo, título, estado HTTP); cada error clona la plantilla (`copy()`) y solo personaliza el detalle. Los módulos aportan sus prototipos con `ProblemCatalogContributor`. |
@@ -24,6 +25,12 @@ Requisito del proyecto: aplicar los **5 patrones creacionales** y, de los estruc
 | **Adapter** | `auth.infrastructure.supabase.SupabaseIdentityAdapter` | Traduce el token y el usuario de Supabase Auth (`sub`, `email`, `aal`, `user_metadata`, `email_confirmed_at`) al modelo interno `FederatedIdentity`. Cambiar de proveedor = otro adaptador. |
 | **Adapter** | `common.crypto.VaultTransitKmsAdapter` | Adapta la API HTTP de Vault Transit a la interfaz `KmsProvider`. |
 | **Adapter** | `common.ratelimit.Bucket4jLocalRateLimiter`, `Bucket4jRedisRateLimiter`, `RedisStateFactory.RedisTicketStore` | Adaptan Bucket4j y los comandos Redis (`SET PX` / `GETDEL` / `SET NX`) a nuestros puertos `RateLimiter` y `OneTimeTicketStore`. |
+| **Adapter** | `imports.infrastructure.CsvTableReader`, `XlsxTableReader` | Adaptan Apache Commons CSV y Apache POI a un único puerto `TableReader`. |
+
+## Complementarios (no exigidos)
+
+- **Strategy:** `imports.application.RowHandler` (una estrategia por tipo de importación) y `common.security.authorization.ScopeRules` (una regla ABAC por rol).
+- **Template Method / Observer:** eventos de dominio de Spring Modulith (`UserProvisioned` → `StudentUserLinker`, `SettingChanged` → `CachingSettingsProxy`).
 
 ## Pruebas que los cubren
 
@@ -33,3 +40,4 @@ Requisito del proyecto: aplicar los **5 patrones creacionales** y, de los estruc
 - `InfrastructureUnitTest`: Proxy de settings.
 - `RedisStateFactoryIT`: familia Redis de la Abstract Factory (requiere Docker).
 - `SupabaseLoginIT` y `AuthDomainTest`: Adapter de Supabase, de punta a punta y unitario.
+- `ImportUnitTest`: Factory Method y Adapters de lectura CSV/Excel.

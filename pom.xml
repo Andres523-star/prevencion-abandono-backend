@@ -38,6 +38,9 @@
         <embedded-postgres.version>2.2.2</embedded-postgres.version>
         <embedded-postgres-binaries.version>16.15.0</embedded-postgres-binaries.version>
         <jacoco.version>0.8.13</jacoco.version>
+        <commons-csv.version>1.14.1</commons-csv.version>
+        <poi.version>5.5.1</poi.version>
+        <datafaker.version>2.7.0</datafaker.version>
     </properties>
 
     <dependencyManagement>
@@ -147,6 +150,23 @@
             <groupId>io.github.resilience4j</groupId>
             <artifactId>resilience4j-spring-boot3</artifactId>
             <version>${resilience4j.version}</version>
+        </dependency>
+
+        <!-- Importación masiva (CSV / Excel) y datos sintéticos para dev -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+            <version>${commons-csv.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.datafaker</groupId>
+            <artifactId>datafaker</artifactId>
+            <version>${datafaker.version}</version>
         </dependency>
 
         <!-- Documentación OpenAPI -->

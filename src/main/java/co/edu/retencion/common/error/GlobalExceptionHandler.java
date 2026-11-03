@@ -85,6 +85,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .detail("El recurso fue modificado por otra persona. Recarga e intenta de nuevo."), request);
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    ResponseEntity<ProblemDetail> handleIntegrity(org.springframework.dao.DataIntegrityViolationException ex,
+                                                  HttpServletRequest request) {
+        // Clave única o referencia violada: no se expone el mensaje de la BD (puede incluir valores).
+        log.warn("Violación de integridad: {}", ex.getMostSpecificCause().getClass().getSimpleName());
+        return respond(catalog.create(ProblemCatalog.CONFLICT)
+                .detail("El registro entra en conflicto con datos existentes"), request);
+    }
+
     @ExceptionHandler(Exception.class)
     ResponseEntity<ProblemDetail> handleUnexpected(Exception ex, HttpServletRequest request) {
         // Se registra la excepción completa (con request-id en el MDC) pero al cliente solo va un mensaje genérico.
