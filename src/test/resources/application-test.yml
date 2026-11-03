@@ -1,0 +1,29 @@
+# Perfil de pruebas. Base de datos, IdP y secretos se inyectan dinámicamente
+# (TestDatabase, FakeEntraIdp, TestSecrets); aquí solo hay valores no sensibles.
+app:
+  security:
+    cors:
+      allowed-origins: https://app.universidad.edu.co
+  rate-limit:
+    per-ip:
+      capacity: 100000
+    per-user:
+      capacity: 100000
+    sensitive:
+      capacity: 100000
+  state:
+    backend: memory
+  users:
+    default-roles: estudiantes.universidad.edu.co=ESTUDIANTE
+  auth:
+    # Sin lista de dominios: se acepta cualquier correo verificado.
+    allowed-email-domains: ""
+    break-glass:
+      enabled: true
+  audit:
+    partition-months-ahead: 1
+
+logging:
+  level:
+    root: WARN
+    co.edu.retencion: INFO

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Logs: texto legible en dev/test y JSON estructurado en el resto de perfiles.
+  Regla del proyecto: los logs NUNCA contienen PII ni tokens. El decorador de enmascaramiento
+  es una red de seguridad adicional: reemplaza correos, JWT, cabeceras Bearer y números largos.
+-->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <springProfile name="dev | test">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} %5p [%X{requestId:-}] %logger{36} - %replace(%msg){'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}','[EMAIL]'}%n%ex</pattern>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="!(dev | test)">
+        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <includeMdcKeyName>traceId</includeMdcKeyName>
+                <includeMdcKeyName>spanId</includeMdcKeyName>
+                <customFields>{"service":"retencion-backend"}</customFields>
+                <jsonGeneratorDecorator class="net.logstash.logback.mask.MaskingJsonGeneratorDecorator">
+                    <defaultMask>[REDACTADO]</defaultMask>
+                    <path>password</path>
+                    <path>refreshToken</path>
+                    <path>accessToken</path>
+                    <path>authorization</path>
+                    <value>[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}</value>
+                    <value>eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*</value>
+                    <value>(?i)bearer\s+[A-Za-z0-9._~+/=-]+</value>
+                    <value>(?&lt;![0-9A-Fa-f-])\d{7,12}(?![0-9A-Fa-f-])</value>
+                </jsonGeneratorDecorator>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+    </springProfile>
+</configuration>
