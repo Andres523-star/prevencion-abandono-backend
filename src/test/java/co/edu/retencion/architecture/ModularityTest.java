@@ -26,7 +26,8 @@ class ModularityTest {
     @Test
     void expectedModulesExist() {
         assertThat(MODULES.stream().map(ApplicationModule::getName))
-                .containsExactlyInAnyOrder("common", "auth", "users", "audit", "settings", "academic", "students", "imports");
+                .containsExactlyInAnyOrder("common", "auth", "users", "audit", "settings", "academic", "students", "imports",
+                        "records", "justifications", "mailing", "wellbeing");
     }
 
     @Test

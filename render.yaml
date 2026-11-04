@@ -95,3 +95,51 @@ services:
         value: "true"
       - key: OPENAPI_ENABLED
         value: "false"
+      # --- Evidencias (Fase 3): almacenamiento S3 compatible (Supabase Storage, Cloudflare R2...)
+      - key: APP_STORAGE_TYPE
+        value: s3
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_REGION
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      # --- Antivirus: servicio privado ClamAV de este Blueprint
+      - key: APP_ANTIVIRUS_MODE
+        value: clamav
+      - key: CLAMAV_HOST
+        fromService:
+          type: pserv
+          name: retencion-clamav
+          property: host
+      - key: CLAMAV_PORT
+        value: "3310"
+      # --- Correo de avisos de faltas (resend o graph)
+      - key: APP_MAIL_PROVIDER
+        sync: false
+      - key: APP_MAIL_FROM
+        sync: false
+      - key: APP_PORTAL_URL
+        sync: false
+      - key: APP_MAIL_RESEND_API_KEY
+        sync: false
+      - key: APP_MAIL_WEBHOOK_SECRET
+        generateValue: true
+      # --- RabbitMQ no está disponible como servicio gestionado en Render: eventos solo internos
+      - key: APP_RABBIT_ENABLED
+        value: "false"
+
+  # ClamAV para escanear evidencias antes de que queden disponibles. Requiere ~2 GB de RAM
+  # (firmas en memoria); solo accesible desde la red privada del Blueprint.
+  - type: pserv
+    name: retencion-clamav
+    runtime: image
+    image:
+      url: docker.io/clamav/clamav:1.4
+    plan: standard
+    region: virginia
+
