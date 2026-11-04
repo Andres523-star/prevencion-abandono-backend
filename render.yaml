@@ -132,6 +132,13 @@ services:
       # --- RabbitMQ no está disponible como servicio gestionado en Render: eventos solo internos
       - key: APP_RABBIT_ENABLED
         value: "false"
+      # --- IA (Claude). Sin clave, el motor de riesgo funciona solo con reglas.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: AI_MODEL_DEFAULT
+        value: claude-opus-5-5
+      - key: AI_MODEL_TRIAGE
+        value: claude-haiku-5-5
 
   # ClamAV para escanear evidencias antes de que queden disponibles. Requiere ~2 GB de RAM
   # (firmas en memoria); solo accesible desde la red privada del Blueprint.

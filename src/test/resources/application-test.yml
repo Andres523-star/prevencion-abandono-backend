@@ -36,6 +36,29 @@ app:
     # El reintento de escaneo se invoca explícitamente en los tests.
     rescan-interval-ms: 86400000
 
+  risk:
+    # Las pruebas procesan la cola y el lote explícitamente (RiskWorker.drain, RiskBatchLauncher.run).
+    worker-enabled: false
+    batch:
+      enabled: false
+
+# Claude simulado con WireMock (FakeClaude registra base-url y api-key).
+ai:
+  max-retries: 0
+  timeout: 2s
+  invalid-output-retries: 1
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      anthropic:
+        # Que las pruebas de errores no abran el circuito para las demás.
+        minimum-number-of-calls: 100000
+  ratelimiter:
+    instances:
+      anthropic:
+        limit-for-period: 100000
+
 logging:
   level:
     root: WARN

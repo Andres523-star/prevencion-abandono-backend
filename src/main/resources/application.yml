@@ -62,6 +62,13 @@ spring:
         enabled: ${APP_RABBIT_ENABLED:false}
   rabbitmq:
     addresses: ${RABBITMQ_ADDRESSES:amqp://guest:guest@localhost:5672}
+  batch:
+    job:
+      # El lote nocturno de riesgo lo lanza RiskBatchLauncher (cron), no el arranque.
+      enabled: false
+    jdbc:
+      # Las tablas BATCH_* las crea Flyway (V4).
+      initialize-schema: never
 
 server:
   port: ${PORT:8080}
@@ -118,6 +125,43 @@ resilience4j:
         failure-rate-threshold: 50
         wait-duration-in-open-state: 30s
         record-failure-predicate: co.edu.retencion.auth.infrastructure.supabase.SupabaseFailurePredicate
+      # API de Claude: si falla de forma repetida se deja de llamar y todo cae al motor de reglas.
+      anthropic:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+  ratelimiter:
+    instances:
+      anthropic:
+        limit-for-period: ${AI_CALLS_PER_MINUTE:60}
+        limit-refresh-period: 1m
+        timeout-duration: 5s
+  bulkhead:
+    instances:
+      anthropic:
+        max-concurrent-calls: ${AI_MAX_CONCURRENT_CALLS:8}
+        max-wait-duration: 2s
+
+# Integración con Claude (SDK oficial de Anthropic). Sin ANTHROPIC_API_KEY todo se resuelve con el
+# motor de reglas. Los interruptores de privacidad y el presupuesto de tokens están en app_settings
+# (ai.enabled, ai.free-text.enabled, ai.payload.include-sensitive-signals, ai.daily-token-budget...).
+ai:
+  api-key: ${ANTHROPIC_API_KEY:}
+  base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+  model:
+    # Modelo capaz para casos críticos y retención; modelo económico para análisis masivo.
+    default: ${AI_MODEL_DEFAULT:claude-opus-5-5}
+    triage: ${AI_MODEL_TRIAGE:claude-haiku-5-5}
+  effort:
+    default: ${AI_EFFORT_DEFAULT:medium}
+    triage: ${AI_EFFORT_TRIAGE:low}
+  max-tokens: 16000
+  timeout: ${AI_TIMEOUT:60s}
+  max-retries: 2
+  invalid-output-retries: 1
+  refusal-fallback: true
+  agent-max-iterations: 6
 
 app:
   http:
@@ -216,6 +260,17 @@ app:
     max-evidence-size: ${APP_EVIDENCE_MAX_SIZE:5MB}
     max-evidences-per-request: 5
     download-url-ttl: 5m
+  risk:
+    # Procesa la cola del motor (reanálisis por eventos y planes de apoyo).
+    worker-enabled: ${APP_RISK_WORKER_ENABLED:true}
+    worker-interval-ms: 15000
+    batch:
+      enabled: ${APP_RISK_BATCH_ENABLED:true}
+      # 01:30 hora de Bogotá.
+      cron: ${APP_RISK_BATCH_CRON:0 30 1 * * *}
+      concurrency: 3
+      chunk-size: 20
+      page-size: 200
   mail:
     # logging (dev: no envía), graph (Microsoft Graph), resend, memory (tests).
     provider: ${APP_MAIL_PROVIDER:logging}
