@@ -17,6 +17,8 @@ import co.edu.retencion.academic.AcademicDirectory;
 import co.edu.retencion.academic.EffectiveAttendancePolicy;
 import co.edu.retencion.academic.GroupInfo;
 import co.edu.retencion.academic.ProgramInfo;
+import co.edu.retencion.academic.SessionInfo;
+import co.edu.retencion.academic.SubjectInfo;
 import co.edu.retencion.academic.TermInfo;
 import co.edu.retencion.academic.domain.CourseGroup;
 import co.edu.retencion.academic.domain.CourseGroupRepository;
@@ -47,12 +49,16 @@ public class AcademicDirectoryService implements AcademicDirectory, AcademicCata
     private final GroupService groupService;
     private final AttendancePolicyService policyService;
     private final CalendarService calendarService;
+    private final co.edu.retencion.academic.domain.ClassSessionRepository sessions;
+    private final co.edu.retencion.academic.domain.HolidayRepository holidayRepository;
     private final Clock clock;
 
     public AcademicDirectoryService(ProgramRepository programs, TermRepository terms, SubjectRepository subjects,
                                     CourseGroupRepository groups, SubjectService subjectService,
                                     GroupService groupService, AttendancePolicyService policyService,
-                                    CalendarService calendarService, Clock clock) {
+                                    CalendarService calendarService,
+                                    co.edu.retencion.academic.domain.ClassSessionRepository sessions,
+                                    co.edu.retencion.academic.domain.HolidayRepository holidayRepository, Clock clock) {
         this.programs = programs;
         this.terms = terms;
         this.subjects = subjects;
@@ -61,6 +67,8 @@ public class AcademicDirectoryService implements AcademicDirectory, AcademicCata
         this.groupService = groupService;
         this.policyService = policyService;
         this.calendarService = calendarService;
+        this.sessions = sessions;
+        this.holidayRepository = holidayRepository;
         this.clock = clock;
     }
 
@@ -111,6 +119,36 @@ public class AcademicDirectoryService implements AcademicDirectory, AcademicCata
     @Override
     public EffectiveAttendancePolicy effectivePolicy(UUID groupId) {
         return policyService.effectiveForGroup(groupId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<SessionInfo> findSession(UUID sessionId) {
+        return sessions.findById(sessionId).flatMap(s -> groups.findById(s.getGroupId())
+                .map(g -> new SessionInfo(s.getId(), g.getId(), g.getTermId(), s.getDate(), s.getStartTime(),
+                        s.getEndTime(), s.getStatus().name())));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<SubjectInfo> findSubject(UUID subjectId) {
+        return subjects.findById(subjectId).map(s -> new SubjectInfo(s.getId(), s.getProgramId(), s.getCode(), s.getName()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Set<LocalDate> holidays(LocalDate from, LocalDate to) {
+        return holidayRepository.findByDateBetweenOrderByDateAsc(from, to).stream()
+                .map(co.edu.retencion.academic.domain.Holiday::getDate).collect(java.util.stream.Collectors.toSet());
+    }
+
+    @Override
+    @Transactional
+    public void markSessionDelivered(UUID sessionId) {
+        sessions.findById(sessionId)
+                .filter(s -> s.getStatus() == co.edu.retencion.academic.domain.ClassSession.Status.PROGRAMADA)
+                .ifPresent(s -> s.changeStatus(co.edu.retencion.academic.domain.ClassSession.Status.DICTADA, null,
+                        clock.instant()));
     }
 
     // ------------------------------------------------------------------ ProgramReferences

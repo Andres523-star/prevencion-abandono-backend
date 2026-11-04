@@ -1,5 +1,6 @@
 package co.edu.retencion.academic;
 
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -23,4 +24,11 @@ public interface AcademicDirectory {
     Set<UUID> groupsTaughtBy(UUID teacherUserId);
 
     EffectiveAttendancePolicy effectivePolicy(UUID groupId);
+
+    Optional<SessionInfo> findSession(UUID sessionId);
+
+    Optional<SubjectInfo> findSubject(UUID subjectId);
+
+    /** Festivos en el rango (para calcular días hábiles). */
+    Set<LocalDate> holidays(LocalDate from, LocalDate to);
 }
