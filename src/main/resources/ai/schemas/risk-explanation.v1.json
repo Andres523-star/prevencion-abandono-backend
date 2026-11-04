@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Explicación de riesgo (risk-explanation.v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["level", "summary", "factors", "probableCauses", "recommendations", "confidence"],
+  "properties": {
+    "level": {"type": "string", "enum": ["ALTO", "MEDIO", "BAJO"]},
+    "summary": {"type": "string", "minLength": 1, "maxLength": 1500},
+    "factors": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "weight", "explanation"],
+        "properties": {
+          "code": {"type": "string", "minLength": 1, "maxLength": 60},
+          "weight": {"type": "number", "minimum": 0, "maximum": 1},
+          "explanation": {"type": "string", "minLength": 1, "maxLength": 600}
+        }
+      }
+    },
+    "probableCauses": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["category", "rationale"],
+        "properties": {
+          "category": {"type": "string", "enum": ["ACADEMICA", "ECONOMICA", "PERSONAL", "SALUD", "INSTITUCIONAL", "OTRA"]},
+          "rationale": {"type": "string", "minLength": 1, "maxLength": 600}
+        }
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["resourceId", "action", "priority", "responsibleRole"],
+        "properties": {
+          "resourceId": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "action": {"type": "string", "minLength": 1, "maxLength": 600},
+          "priority": {"type": "string", "enum": ["ALTA", "MEDIA", "BAJA"]},
+          "responsibleRole": {"type": "string", "enum": ["CONSEJERO", "DOCENTE", "PSICOLOGO", "COORDINADOR", "BIENESTAR"]}
+        }
+      }
+    },
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+  }
+}
