@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<body>
+<div th:replace="~{mail/fragments :: header}"></div>
+<p style="font-family: Arial, sans-serif; color: #1f2937;">
+  Se registró una falta en <strong th:text="${materia}">materia</strong> en la clase del
+  <strong th:text="${fecha}">01/01/2026</strong>.
+</p>
+<div th:replace="~{mail/fragments :: counter}"></div>
+
+<div th:replace="~{mail/fragments :: deadline}"></div>
+<div th:replace="~{mail/fragments :: footer}"></div>
+</body>
+</html>

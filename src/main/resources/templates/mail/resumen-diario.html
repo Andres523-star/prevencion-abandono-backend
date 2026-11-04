@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<body>
+<div th:replace="~{mail/fragments :: header}"></div>
+<p style="font-family: Arial, sans-serif; color: #1f2937;">Estas son las faltas registradas recientemente:</p>
+<table style="font-family: Arial, sans-serif; color: #1f2937; border-collapse: collapse;">
+  <thead>
+  <tr>
+    <th style="text-align: left; padding: 4px 8px;">Materia</th>
+    <th style="text-align: left; padding: 4px 8px;">Fecha</th>
+    <th style="text-align: left; padding: 4px 8px;">Faltas / límite</th>
+    <th style="text-align: left; padding: 4px 8px;">Justificar hasta</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr th:each="item : ${items}">
+    <td style="padding: 4px 8px;" th:text="${item.materia}">materia</td>
+    <td style="padding: 4px 8px;" th:text="${item.fecha}">fecha</td>
+    <td style="padding: 4px 8px;" th:text="${item.faltas} + ' / ' + ${item.limite}">1 / 4</td>
+    <td style="padding: 4px 8px;" th:text="${item.fechaLimite}">fecha</td>
+  </tr>
+  </tbody>
+</table>
+<div th:replace="~{mail/fragments :: footer}"></div>
+</body>
+</html>

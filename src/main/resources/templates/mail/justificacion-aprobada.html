@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<body>
+<div th:replace="~{mail/fragments :: header}"></div>
+<p style="font-family: Arial, sans-serif; color: #1f2937;">
+  El docente de <strong th:text="${materia}">materia</strong> aprobó tu justificación de la falta del
+  <strong th:text="${fecha}">01/01/2026</strong>. La falta se descontó de tu contador.
+</p>
+<div th:replace="~{mail/fragments :: counter}"></div>
+<div th:replace="~{mail/fragments :: footer}"></div>
+</body>
+</html>
