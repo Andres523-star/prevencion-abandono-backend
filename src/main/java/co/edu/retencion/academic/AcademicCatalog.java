@@ -29,6 +29,9 @@ public interface AcademicCatalog {
     /** Carga (idempotente) los festivos de Colombia del año. */
     void loadColombianHolidays(int year);
 
+    /** Marca la sesión como DICTADA al tomar asistencia (si estaba PROGRAMADA). */
+    void markSessionDelivered(UUID sessionId);
+
     /**
      * @param id      id del registro
      * @param outcome creado, actualizado o sin cambios
