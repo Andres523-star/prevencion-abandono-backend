@@ -91,7 +91,7 @@ ADMIN, CONSEJERO (consejero académico), PSICOLOGO (bienestar), COORDINADOR (de 
 - **Las indicaciones de fases futuras que mencionen Microsoft Entra ID, Microsoft Graph u Oracle Cloud Bogotá quedan reemplazadas** por Supabase Auth, un proveedor de correo por definir y Render, respectivamente.
 - Código limpio y comentado (Javadoc en español explicando el *porqué*).
 - Aplicar los **5 patrones creacionales** (Singleton, Factory Method, Abstract Factory, Builder, Prototype) y los estructurales **Proxy, Decorator y Adapter**. Mapa actualizado en `docs/patrones-de-diseno.md`; cada clase que implementa un patrón lo declara en su Javadoc.
-- Dejar rastro del uso de IA: nota "Asistido por IA (Claude, Anthropic)" en `package-info.java` de cada módulo y archivos de infraestructura, registro por fase en `BITACORA_IA.md` y `Co-Authored-By` en los commits.
+- Dejar rastro del uso de IA: nota "Asistido por IA (Claude, Anthropic)" en `package-info.java` de cada módulo y archivos de infraestructura y registro por fase en `BITACORA_IA.md`. **Los commits no llevan `Co-Authored-By` ni ninguna mención a la IA como autora o colaboradora**: el autor de todos los commits es Andres523-star (decisión del equipo, 2026-11-04).
 - Despliegue en **Render** (Blueprint `render.yaml`) con PostgreSQL gestionado para muchos usuarios. Sin requisito de alojamiento en Colombia (decisión del equipo, 2026-11-03).
 
 ### Estado: Fase 1 completada (2026-11-03) — decisiones tomadas
