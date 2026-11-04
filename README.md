@@ -40,6 +40,8 @@ Pruebas completas (unitarias + integración + arquitectura + cobertura):
 | `justifications` | Justificaciones con evidencias (magic bytes + antivirus), decisión exclusiva del docente, vencimiento | `JustificationDecided` |
 | `mailing` | Avisos de faltas al estudiante (outbox, ventana de edición o resumen diario, reintentos, rebotes) | solo eventos |
 | `wellbeing` | Evaluaciones físicas/psicológicas y remisiones (solo PSICOLOGO, cifrado, auditoría de lectura) | `WellbeingSignals` |
+| `ai` | Puerta única hacia Claude: anonimizador con lista blanca, redactor de PII, salida validada con JSON Schema, presupuesto de tokens, resiliencia, catálogo de recursos de apoyo y agente de retención | `Anonymizer`, `RiskExplainer`, `SupportPlanWriter`, `ResourceCatalog`, SPI `RetentionAgentTools` |
+| `risk` | Motor de riesgo híbrido (reglas configurables o modelo ONNX propio + explicación de IA), historial de análisis, planes de apoyo, lote nocturno (Spring Batch), métricas de sesgo, dataset y registro de modelos | `RiskQueries`, `RiskAssessed` |
 
 Capas por módulo: `api` → `application` → `domain` ← `infrastructure`. Límites verificados por
 `ModularityTest` (Modulith) y `ArchitectureRulesTest` (ArchUnit).
@@ -81,6 +83,17 @@ Capas por módulo: `api` → `application` → `domain` ← `infrastructure`. L�
 | `/api/v1/students/{id}/wellbeing/*` | solo PSICOLOGO + `X-Access-Reason` | Evaluaciones y remisiones |
 | `/api/v1/students/{id}/observations`, `/causes`, `/dropout-causes` | personal según rol | Observaciones y causas de deserción |
 
+| `POST /api/v1/students/{id}/analyze` | ADMIN, CONSEJERO, PSICOLOGO, COORDINADOR (alcance) | Análisis de riesgo ahora (reglas/ML + explicación de IA) |
+| `GET /api/v1/students/{id}/risk-assessments[/latest]` | personal según alcance (docente: solo motivos académicos) | Historial de análisis (keyset, auditado) |
+| `GET /api/v1/students/{id}/support-plans`, `GET /support-plans/{id}/rendered` | ADMIN, CONSEJERO, PSICOLOGO, COORDINADOR (+ `X-Access-Reason` para el texto con nombre) | Planes de apoyo por asistencia |
+| `POST /api/v1/support-plans/{id}/approve`, `/reject` | CONSEJERO, PSICOLOGO, COORDINADOR | Revisión humana del plan |
+| `GET/POST/PUT /api/v1/support-resources` | personal / ADMIN | Catálogo de recursos de apoyo (RAG simple) |
+| `POST /api/v1/students/{id}/retention-agent/drafts` | ADMIN, CONSEJERO, PSICOLOGO (si `ai.agent.enabled`) | Borrador del agente de retención |
+| `GET /api/v1/risk/bias-metrics` | ADMIN, CONSEJERO, COORDINADOR | Distribución del riesgo por programa, estrato y semestre |
+| `POST /api/v1/risk/batch-runs` | ADMIN | Lanza el lote nocturno |
+| `POST /api/v1/ml/dataset-exports`, `/ml/models`, `GET /ml/models/{v}/comparison`, `POST /ml/models/{v}/approve` | ADMIN | Modelo predictivo propio (ver docs/modelo-predictivo.md) |
+| `GET /api/v1/ai/usage` | ADMIN | Tokens del día y presupuesto |
+
 Errores siempre en `application/problem+json` con campo `code` estable.
 
 ## Documentación
@@ -92,4 +105,5 @@ Errores siempre en `application/problem+json` con campo `code` estable.
 - [Importación masiva y datos sintéticos](docs/importacion.md)
 - [Asistencia, justificaciones y correo de avisos](docs/asistencia-y-correo.md)
 - [Rendimiento (asistencia a 5 millones de filas)](docs/rendimiento.md)
+- [Motor de riesgo e IA](docs/motor-de-riesgo.md) y [modelo predictivo propio](docs/modelo-predictivo.md) (`ml/train.py`)
 - Diagramas de módulos (PlantUML): `target/spring-modulith-docs/` tras `./mvnw verify`

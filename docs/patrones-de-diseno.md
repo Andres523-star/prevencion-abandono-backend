@@ -1,4 +1,4 @@
-# Patrones de diseño aplicados (Fases 1 a 3)
+# Patrones de diseño aplicados (Fases 1 a 4)
 
 Requisito del proyecto: aplicar los **5 patrones creacionales** y, de los estructurales,
 **Proxy, Decorator y Adapter**. Cada clase lleva en su Javadoc el patrón que implementa y por qué.
@@ -13,8 +13,12 @@ Requisito del proyecto: aplicar los **5 patrones creacionales** y, de los estruc
 | **Factory Method** | `common.files.FilesConfig` | Elige el almacenamiento (`local` o `s3`) y el antivirus (`clamav` o `signature`) por configuración. |
 | **Factory Method** | `imports.infrastructure.TableReader.forFormat` | Decide qué lector construir (CSV o Excel) según el formato detectado por *magic bytes*. |
 | **Abstract Factory** | `common.state.DistributedStateFactory` (`InMemoryStateFactory`, `RedisStateFactory`) | Crea una *familia* coherente de componentes de estado compartido (rate limiter + almacén de tickets de un solo uso y anti-replay): todos en memoria (dev/test) o todos en Redis (producción con varias instancias). |
+| **Factory Method** | `risk.application.ScorerFactory` | Decide en cada análisis qué `RiskScorer` construir: `MlScorer` si `risk.ml.active-version` apunta a un modelo APROBADO y cargable, `RulesScorer` en cualquier otro caso. Activar o volver atrás un modelo es cambiar un parámetro. |
+| **Builder** | `ai.domain.AiPayload.Builder` | Compone el payload hacia la IA por partes opcionales (señales sensibles, texto libre redactado, plan, historial, recursos) en orden canónico; `build()` valida contra la lista blanca, así no existe un payload sin validar. |
 | **Builder** | `audit.domain.AuditEntry.Builder` | Una entrada de auditoría tiene muchos campos opcionales (actor, IP, motivo, entidad); el builder evita constructores con una docena de parámetros y valida los obligatorios. |
 | **Prototype** | `common.error.ApiProblem` + `common.error.ProblemCatalog` | El catálogo guarda una plantilla de error por código (tipo, título, estado HTTP); cada error clona la plantilla (`copy()`) y solo personaliza el detalle. Los módulos aportan sus prototipos con `ProblemCatalogContributor`. |
+
+| **Prototype** | `risk.domain.SupportPlanTemplates` | Un plan de apoyo prototipo por nivel de asistencia (aviso, crítico, pérdida); cada plan nuevo es una copia (`PlanTemplate.copy()`) a la que se agregan acciones según el contexto, sin tocar el prototipo. |
 
 ## Estructurales
 
@@ -32,10 +36,13 @@ Requisito del proyecto: aplicar los **5 patrones creacionales** y, de los estruc
 | **Adapter** | `common.files.ClamAvScanner` | Adapta el protocolo `zINSTREAM` de clamd al puerto `MalwareScanner`. |
 | **Adapter** | `mailing.infrastructure.GraphEmailSender`, `ResendEmailSender` | Adaptan Microsoft Graph `sendMail` (client credentials) y la API de Resend al puerto `EmailSender`. |
 
+| **Adapter** | `ai.infrastructure.AnthropicLlmGateway` | Adapta el SDK oficial de Anthropic al puerto `LlmGateway` y traduce sus excepciones (429, 5xx, red, timeout) a un motivo normalizado (`AiFailure`). |
+| **Adapter** | `risk.infrastructure.OnnxModelRuntime` | Adapta ONNX Runtime al puerto `MlModelRuntime` y al `ProbabilityModel` del dominio (tensor `[N,2]`, `[N,1]` o ZipMap). |
+| **Decorator** | `ai.infrastructure.BudgetedLlmGateway`, `ResilientLlmGateway` | Se apilan sobre el adaptador de Claude: `presupuesto diario de tokens → bulkhead + rate limiter + circuit breaker → SDK`. |
 
 ## Complementarios (no exigidos)
 
-- **Strategy:** `imports.application.RowHandler` (una estrategia por tipo de importación, incluida `GradeRowHandler`) y `common.security.authorization.ScopeRules` (una regla ABAC por rol).
+- **Strategy:** `risk.domain.RiskRule` (una regla por aspecto: promedio, faltas, tendencia, conducta, bienestar, causas, contexto socioeconómico), `imports.application.RowHandler` (una estrategia por tipo de importación, incluida `GradeRowHandler`) y `common.security.authorization.ScopeRules` (una regla ABAC por rol).
 - **Template Method / Observer:** eventos de dominio de Spring Modulith (`UserProvisioned` → `StudentUserLinker`, `SettingChanged` → `CachingSettingsProxy`).
 
 ## Pruebas que los cubren
@@ -49,3 +56,7 @@ Requisito del proyecto: aplicar los **5 patrones creacionales** y, de los estruc
 - `ImportUnitTest`: Factory Method y Adapters de lectura CSV/Excel.
 - `FilesUnitTest`: Adapter de clamd (servidor clamd simulado) y del almacenamiento local firmado.
 - `AbsenceMailIT` y `AbsenceFlowIT`: Adapter de correo en memoria y Factory Method del proveedor.
+- `AiDomainTest`: Builder del payload (lista blanca, sin PII, hash estable).
+- `RiskDomainTest`: Strategy de reglas, Prototype de planes y scorers.
+- `OnnxModelRuntimeTest`: Adapter de ONNX Runtime con un modelo real construido en la prueba.
+- `RiskEngineIT` y `MlModelIT`: Adapter + Decorators de Claude (WireMock) y Factory Method del scorer.
