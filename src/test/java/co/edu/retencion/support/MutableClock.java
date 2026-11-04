@@ -13,10 +13,25 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class MutableClock extends Clock {
 
-    private final AtomicReference<Duration> offset = new AtomicReference<>(Duration.ZERO);
+    private final AtomicReference<Duration> offset;
+    private final ZoneId zone;
+
+    public MutableClock() {
+        this(new AtomicReference<>(Duration.ZERO), ZoneOffset.UTC);
+    }
+
+    private MutableClock(AtomicReference<Duration> offset, ZoneId zone) {
+        this.offset = offset;
+        this.zone = zone;
+    }
 
     public void advance(Duration duration) {
         offset.updateAndGet(current -> current.plus(duration));
+    }
+
+    /** Fija el instante actual (el reloj sigue corriendo desde ahí). */
+    public void setNow(Instant now) {
+        offset.set(Duration.between(Instant.now(), now));
     }
 
     public void reset() {
@@ -30,11 +45,12 @@ public class MutableClock extends Clock {
 
     @Override
     public ZoneId getZone() {
-        return ZoneOffset.UTC;
+        return zone;
     }
 
+    /** Vista en otra zona que comparte el mismo desfase (p. ej. fecha de negocio en Bogotá). */
     @Override
     public Clock withZone(ZoneId zone) {
-        return this;
+        return new MutableClock(offset, zone);
     }
 }
