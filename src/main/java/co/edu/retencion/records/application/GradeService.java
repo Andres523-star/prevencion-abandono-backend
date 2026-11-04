@@ -12,6 +12,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,7 @@ import co.edu.retencion.common.data.UpsertOutcome;
 import co.edu.retencion.common.error.DomainException;
 import co.edu.retencion.common.security.CurrentUser;
 import co.edu.retencion.records.GradeBook;
+import co.edu.retencion.records.GradeRecorded;
 import co.edu.retencion.records.application.RecordsViews.GradeView;
 import co.edu.retencion.records.application.RecordsViews.IndicatorsView;
 import co.edu.retencion.records.application.RecordsViews.SubjectIndicatorView;
@@ -43,9 +45,11 @@ public class GradeService implements GradeBook {
     private final AcademicDirectory academic;
     private final RecordsAccess access;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
     public GradeService(GradeRepository grades, StudentRegistry students, AcademicDirectory academic,
-                        RecordsAccess access, Clock clock) {
+                        RecordsAccess access, Clock clock, ApplicationEventPublisher events) {
+        this.events = events;
         this.grades = grades;
         this.students = students;
         this.academic = academic;
@@ -87,6 +91,7 @@ public class GradeService implements GradeBook {
     public GradeView correct(UUID gradeId, BigDecimal value, LocalDate assessedOn, String description) {
         Grade grade = load(gradeId);
         grade.correct(value, assessedOn, blankToNull(description), CurrentUser.require().userId(), clock.instant());
+        publishChange(grade);
         return GradeView.of(grades.saveAndFlush(grade));
     }
 
@@ -95,6 +100,7 @@ public class GradeService implements GradeBook {
         Grade grade = load(gradeId);
         grade.delete(clock.instant());
         grades.saveAndFlush(grade);
+        publishChange(grade);
     }
 
     @Transactional(readOnly = true)
@@ -149,11 +155,20 @@ public class GradeService implements GradeBook {
         Optional<Grade> existing = grades.findNatural(enrollment.id(), assessedOn, normalizedDescription);
         if (existing.isPresent()) {
             boolean changed = existing.get().correct(value, assessedOn, normalizedDescription, actor, clock.instant());
+            if (changed) {
+                publishChange(existing.get());
+            }
             return new Upserted(existing.get(), changed ? UpsertOutcome.UPDATED : UpsertOutcome.UNCHANGED);
         }
         Grade grade = grades.save(Grade.record(enrollment.id(), enrollment.studentId(), enrollment.groupId(),
                 enrollment.termId(), value, assessedOn, normalizedDescription, actor, clock.instant()));
+        publishChange(grade);
         return new Upserted(grade, UpsertOutcome.CREATED);
+    }
+
+    /** El motor de riesgo reanaliza al estudiante (con antirrebote) cuando cambian sus notas. */
+    private void publishChange(Grade grade) {
+        events.publishEvent(new GradeRecorded(grade.getStudentId(), grade.getGroupId(), grade.getEnrollmentId()));
     }
 
     private String subjectName(UUID groupId) {
