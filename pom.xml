@@ -37,7 +37,7 @@
         <wiremock.version>3.13.2</wiremock.version>
         <embedded-postgres.version>2.2.2</embedded-postgres.version>
         <embedded-postgres-binaries.version>16.15.0</embedded-postgres-binaries.version>
-        <jacoco.version>0.8.13</jacoco.version>
+        <jacoco.version>0.8.16</jacoco.version>
         <commons-csv.version>1.14.1</commons-csv.version>
         <poi.version>5.5.1</poi.version>
         <datafaker.version>2.7.0</datafaker.version>
