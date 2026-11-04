@@ -2,7 +2,7 @@
 # Imagen de producción: build con Maven y ejecución con JRE mínimo como usuario sin privilegios.
 # Asistido por IA (Claude, Anthropic). Ver BITACORA_IA.md.
 
-FROM eclipse-temurin:21-jdk-alpine AS build
+FROM eclipse-temurin:25-jdk-alpine AS build
 WORKDIR /workspace
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml lombok.config ./
@@ -13,7 +13,7 @@ RUN ./mvnw -B -q package -DskipTests && \
     mkdir -p target/extracted && \
     java -Djarmode=tools -jar target/retencion-backend-*.jar extract --layers --launcher --destination target/extracted
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 RUN addgroup -S app && adduser -S -G app -u 10001 app
 WORKDIR /app
 COPY --from=build --chown=app:app /workspace/target/extracted/dependencies/ ./
