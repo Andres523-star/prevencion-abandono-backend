@@ -68,6 +68,8 @@ public abstract class IntegrationTest {
     static void infrastructure(DynamicPropertyRegistry registry) {
         TestDatabase.get().register(registry);
         SUPABASE.register(registry);
+        // Claude simulado: todas las pruebas comparten el mismo contexto de Spring.
+        FakeClaude.get().register(registry);
         TestSecrets.register(registry);
     }
 
