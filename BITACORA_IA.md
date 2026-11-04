@@ -73,3 +73,31 @@ permitir el ingreso con cualquier correo.
   pruebas de ABAC por rol).
 
 **Revisión humana:** pendiente por el equipo.
+
+### Fase 3 — Registro académico, asistencia, correos y justificaciones (2026-11-04)
+
+**Generado por IA:**
+- Módulo `records`: notas (0.0–5.0, un decimal) con indicadores de riesgo (promedios, materias
+  bajo 3.0, tendencia), asistencia por sesión con ventana de edición configurable, tabla
+  particionada por periodo, contador de faltas transaccional, eventos de umbral y pérdida,
+  observaciones cifradas y catálogo de causas de deserción.
+- Módulo `justifications`: justificación por falta con evidencias (magic bytes, tamaño,
+  antivirus antes de guardar, nombres aleatorios, URL prefirmada auditada), decisión exclusiva
+  del docente del grupo, traspaso al nuevo docente y vencimiento diario.
+- Módulo `mailing`: outbox de avisos al estudiante (ventana de edición o resumen diario),
+  revalidación al enviar, 8 plantillas Thymeleaf sin datos sensibles, reintentos con backoff,
+  rebotes por webhook HMAC con supresión y adaptadores Microsoft Graph, Resend, log y memoria.
+- Módulo `wellbeing`: evaluaciones y remisiones solo para PSICOLOGO, cifradas y con auditoría de
+  lectura.
+- Infraestructura `common.files` (almacenamiento local/S3, ClamAV, detección por magic bytes) y
+  externalización opcional de eventos a RabbitMQ.
+- Importación de notas (`GRADES`), migración `V3__registro_academico_justificaciones_y_correo.sql`,
+  servicio privado ClamAV en `render.yaml` y variables nuevas en `.env.example`.
+- Pruebas: 99 unitarias/arquitectura + 109 de integración, incluido el flujo de punta a punta
+  (falta → correo encolado → justificación con evidencia → antivirus → decisión → contador →
+  evento), 403 para todo el que no sea el docente del grupo, EICAR y extensión engañosa
+  rechazados, correo sin datos sensibles y prueba de volumen con 5.063.823 filas
+  (`docs/rendimiento.md`).
+
+**Revisión humana:** pendiente por el equipo (en especial el texto de las plantillas de correo
+y la elección del proveedor de correo).
