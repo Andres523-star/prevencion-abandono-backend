@@ -35,7 +35,11 @@ Pruebas completas (unitarias + integración + arquitectura + cobertura):
 | `settings` | Parámetros en caliente (sin redeploy) | `SettingsProvider`, `SettingChanged` |
 | `academic` | Programas, periodos, festivos, materias, grupos, horarios, sesiones y políticas de asistencia | `AcademicDirectory`, `AcademicCatalog`, `GroupTeacherChanged` |
 | `students` | Estudiante seudonimizado, identidad cifrada, perfil socioeconómico, inscripciones, consentimiento | `StudentRegistry`, `StudentInfo` |
-| `imports` | Importación CSV/Excel con dry-run, cola y reporte | solo REST |
+| `imports` | Importación CSV/Excel con dry-run, cola y reporte (incluye notas) | solo REST |
+| `records` | Notas e indicadores de riesgo, asistencia por sesión (particionada por periodo), contador de faltas, observaciones y causas de deserción | `AttendanceLedger`, `GradeBook`, `AbsenceRecorded`, `AttendanceThresholdReached`, `SubjectLostByAbsences` |
+| `justifications` | Justificaciones con evidencias (magic bytes + antivirus), decisión exclusiva del docente, vencimiento | `JustificationDecided` |
+| `mailing` | Avisos de faltas al estudiante (outbox, ventana de edición o resumen diario, reintentos, rebotes) | solo eventos |
+| `wellbeing` | Evaluaciones físicas/psicológicas y remisiones (solo PSICOLOGO, cifrado, auditoría de lectura) | `WellbeingSignals` |
 
 Capas por módulo: `api` → `application` → `domain` ← `infrastructure`. Límites verificados por
 `ModularityTest` (Modulith) y `ArchitectureRulesTest` (ArchUnit).
@@ -66,6 +70,16 @@ Capas por módulo: `api` → `application` → `domain` ← `infrastructure`. L�
 | `GET /api/v1/students/me` | ESTUDIANTE | Portal: mis datos |
 | `GET /api/v1/groups/{id}/roster` | docente del grupo y personal | Lista de clase (auditada) |
 | `POST /api/v1/imports` | ADMIN | Importación masiva (ver docs/importacion.md) |
+| `PUT /api/v1/sessions/{id}/attendance` | docente del grupo (48 h); COORDINADOR/ADMIN después, con `X-Access-Reason` | Asistencia individual o por lote |
+| `GET /api/v1/students/{id}/absence-counters`, `/groups/{id}/absence-counters` | según alcance | Contadores de faltas por materia |
+| `POST /api/v1/groups/{id}/grades`, `/enrollments/{id}/grades` | docente del grupo, COORDINADOR, ADMIN | Notas (lote o individual) |
+| `GET /api/v1/students/{id}/grade-indicators` | según alcance | Promedios, materias bajo 3.0 y tendencia |
+| `POST /api/v1/justifications`, `/justifications/{id}/evidences` | ESTUDIANTE titular | Justificar una falta y adjuntar PDF/JPG/PNG |
+| `POST /api/v1/justifications/{id}/decision` | solo el docente del grupo | Aprobar o rechazar (comentario obligatorio al rechazar) |
+| `GET /api/v1/evidences/{id}/download-url` | titular, docente asignado, ADMIN | URL prefirmada de 5 min (auditada) |
+| `GET /api/v1/mail/outbox`, `POST /api/v1/mail/bounces` | ADMIN / webhook firmado | Registro de entrega y rebotes |
+| `/api/v1/students/{id}/wellbeing/*` | solo PSICOLOGO + `X-Access-Reason` | Evaluaciones y remisiones |
+| `/api/v1/students/{id}/observations`, `/causes`, `/dropout-causes` | personal según rol | Observaciones y causas de deserción |
 
 Errores siempre en `application/problem+json` con campo `code` estable.
 
@@ -76,4 +90,6 @@ Errores siempre en `application/problem+json` con campo `code` estable.
 - [Despliegue en Render](docs/render-despliegue.md)
 - [Cuenta de emergencia (break-glass)](docs/break-glass.md)
 - [Importación masiva y datos sintéticos](docs/importacion.md)
+- [Asistencia, justificaciones y correo de avisos](docs/asistencia-y-correo.md)
+- [Rendimiento (asistencia a 5 millones de filas)](docs/rendimiento.md)
 - Diagramas de módulos (PlantUML): `target/spring-modulith-docs/` tras `./mvnw verify`
