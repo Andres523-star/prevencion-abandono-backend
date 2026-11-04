@@ -32,7 +32,8 @@ public class ImportJob {
         TEACHERS,
         SUBJECTS,
         GROUPS,
-        ENROLLMENTS
+        ENROLLMENTS,
+        GRADES
     }
 
     /** Formato del archivo. */
