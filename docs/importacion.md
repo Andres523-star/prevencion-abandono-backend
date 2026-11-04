@@ -5,7 +5,7 @@
 | Parámetro | Obligatorio | Descripción |
 |---|---|---|
 | `file` | sí | CSV en UTF-8 (separador `,` o `;`, se detecta solo) o Excel `.xlsx` (primera hoja). Máx. 20 MB / 200.000 filas. |
-| `type` | sí | `TEACHERS`, `SUBJECTS`, `GROUPS`, `STUDENTS` o `ENROLLMENTS` |
+| `type` | sí | `TEACHERS`, `SUBJECTS`, `GROUPS`, `STUDENTS`, `ENROLLMENTS` o `GRADES` |
 | `dryRun` | no | `true` = solo valida (no escribe nada) |
 | `mapping` | no | JSON `{"campo": "Encabezado del archivo"}` para archivos con otros nombres de columna |
 
@@ -97,6 +97,22 @@ vincula como estudiante.
 | `grupo`* | A |
 
 Respeta el cupo del grupo. Una inscripción retirada se reactiva.
+
+### GRADES — clave: inscripción (`documento` + `programa` + `materia` + `periodo` + `grupo`) + `fecha` + `descripcion`
+| Campo | Ejemplo |
+|---|---|
+| `documento`* | 1020304050 |
+| `programa`* | MED |
+| `materia`* | MED-201 |
+| `periodo`* | 2026-2 |
+| `grupo`* | A |
+| `nota`* | 3.8 (o `3,8`; escala 0.0–5.0, se redondea a un decimal) |
+| `fecha`* | 2026-09-15 |
+| `descripcion` | Parcial 1 |
+
+El estudiante debe estar inscrito en el grupo. Reimportar el archivo no duplica notas: si cambia
+el valor de una nota con la misma clave, se actualiza. La plataforma no calcula la nota final
+oficial; solo usa estas notas para los indicadores de riesgo.
 
 ## Adaptar el formato de los datos reales
 
