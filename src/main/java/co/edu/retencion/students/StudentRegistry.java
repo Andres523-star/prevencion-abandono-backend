@@ -1,6 +1,7 @@
 package co.edu.retencion.students;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,6 +22,33 @@ public interface StudentRegistry {
 
     /** Inscribe al estudiante en el grupo (idempotente; reactiva una inscripción retirada). */
     UpsertOutcome enroll(UUID studentId, UUID groupId);
+
+    Optional<EnrollmentInfo> findEnrollment(UUID enrollmentId);
+
+    Optional<EnrollmentInfo> findEnrollment(UUID studentId, UUID groupId);
+
+    /** Inscripciones activas del grupo (lista de clase para tomar asistencia o notas). */
+    List<EnrollmentInfo> activeEnrollments(UUID groupId);
+
+    Optional<UUID> findStudentIdByUser(UUID userId);
+
+    /**
+     * Correo del estudiante para los avisos de faltas (único uso de correo de la plataforma). Lo usa
+     * solo el módulo de correo; nunca debe registrarse en logs.
+     */
+    Optional<Contact> notificationContact(UUID studentId);
+
+    /**
+     * @param email           correo descifrado
+     * @param emailBlindIndex HMAC del correo (para supresiones por rebote)
+     */
+    record Contact(String email, String emailBlindIndex) {
+
+        @Override
+        public String toString() {
+            return "Contact[***]";
+        }
+    }
 
     /**
      * Datos de un estudiante para alta o actualización.
