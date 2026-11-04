@@ -16,6 +16,15 @@ public interface StudentRepository extends JpaRepository<Student, UUID> {
 
     boolean existsByAnonCode(String anonCode);
 
+    /** Keyset de estudiantes activos de un programa (lote nocturno de riesgo). */
+    @Query("""
+            select s.id from Student s
+            where s.programId = :programId and s.status = co.edu.retencion.students.StudentStatus.ACTIVO
+              and (:fromStart = true or s.id > :after)
+            order by s.id
+            """)
+    List<UUID> activeIds(UUID programId, boolean fromStart, UUID after, Limit limit);
+
     Optional<Student> findByUserId(UUID userId);
 
     /**

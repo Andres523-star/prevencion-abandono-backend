@@ -3,6 +3,7 @@ package co.edu.retencion.students;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import co.edu.retencion.common.data.UpsertOutcome;
@@ -31,6 +32,33 @@ public interface StudentRegistry {
     List<EnrollmentInfo> activeEnrollments(UUID groupId);
 
     Optional<UUID> findStudentIdByUser(UUID userId);
+
+    /** Todas las inscripciones del estudiante (activas y retiradas), de la más reciente a la más antigua. */
+    List<EnrollmentInfo> enrollmentsOf(UUID studentId);
+
+    /** Estudiantes con alguna inscripción en el periodo (dataset de entrenamiento). */
+    Set<UUID> studentIdsEnrolledInTerm(UUID termId);
+
+    /**
+     * Ids de estudiantes ACTIVOS del programa en orden, por keyset (lote nocturno del motor de riesgo,
+     * particionado por programa).
+     *
+     * @param after último id de la página anterior, o {@code null} para empezar
+     */
+    List<UUID> activeStudentIds(UUID programId, UUID after, int limit);
+
+    /**
+     * Perfil socioeconómico sin identificadores. Solo para el motor de riesgo, que lo usa con
+     * cuidado de sesgo (el estrato nunca suma puntaje) y nunca lo envía a la IA.
+     */
+    Optional<SocioeconomicInfo> socioeconomic(UUID studentId);
+
+    /**
+     * Primer nombre del estudiante, para rellenar el marcador {@code {{nombre}}} de los textos
+     * dirigidos a él. Es un dato personal: el llamador debe auditar la lectura y nunca enviarlo a
+     * la IA ni a los logs.
+     */
+    Optional<String> givenName(UUID studentId);
 
     /**
      * Correo del estudiante para los avisos de faltas (único uso de correo de la plataforma). Lo usa

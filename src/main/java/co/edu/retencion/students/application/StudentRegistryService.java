@@ -2,17 +2,22 @@ package co.edu.retencion.students.application;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+
+import org.springframework.data.domain.Limit;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import co.edu.retencion.common.data.UpsertOutcome;
 import co.edu.retencion.students.EnrollmentInfo;
+import co.edu.retencion.students.SocioeconomicInfo;
 import co.edu.retencion.students.StudentInfo;
 import co.edu.retencion.students.StudentRegistry;
 import co.edu.retencion.students.domain.Enrollment;
 import co.edu.retencion.students.domain.EnrollmentRepository;
+import co.edu.retencion.students.domain.SocioeconomicProfileRepository;
 import co.edu.retencion.students.domain.Student;
 import co.edu.retencion.students.domain.StudentIdentity;
 import co.edu.retencion.students.domain.StudentIdentityRepository;
@@ -27,10 +32,13 @@ public class StudentRegistryService implements StudentRegistry {
     private final StudentWriter writer;
     private final EnrollmentService enrollments;
     private final EnrollmentRepository enrollmentRepository;
+    private final SocioeconomicProfileRepository socioeconomic;
 
     public StudentRegistryService(StudentRepository students, StudentIdentityRepository identities,
                                   StudentWriter writer, EnrollmentService enrollments,
-                                  EnrollmentRepository enrollmentRepository) {
+                                  EnrollmentRepository enrollmentRepository,
+                                  SocioeconomicProfileRepository socioeconomic) {
+        this.socioeconomic = socioeconomic;
         this.students = students;
         this.identities = identities;
         this.writer = writer;
@@ -94,6 +102,39 @@ public class StudentRegistryService implements StudentRegistry {
         return students.findById(studentId).flatMap(s -> identities.findById(studentId))
                 .filter(i -> i.getEmail() != null)
                 .map(i -> new Contact(i.getEmail(), i.getEmailBlindIndex()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EnrollmentInfo> enrollmentsOf(UUID studentId) {
+        return enrollmentRepository.findByStudentIdOrderByEnrolledAtDesc(studentId).stream()
+                .map(StudentRegistryService::info).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Set<UUID> studentIdsEnrolledInTerm(UUID termId) {
+        return enrollmentRepository.findStudentIdsByTermId(termId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UUID> activeStudentIds(UUID programId, UUID after, int limit) {
+        return students.activeIds(programId, after == null, after, Limit.of(Math.max(1, Math.min(limit, 1000))));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<SocioeconomicInfo> socioeconomic(UUID studentId) {
+        return socioeconomic.findById(studentId).map(p -> new SocioeconomicInfo(p.getStratum(), p.getWorks(),
+                p.getDependents(), p.getTransportMode()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<String> givenName(UUID studentId) {
+        return identities.findById(studentId).map(StudentIdentity::getFullName)
+                .map(String::trim).filter(n -> !n.isEmpty()).map(n -> n.split("\\s+")[0]);
     }
 
     static EnrollmentInfo info(Enrollment e) {

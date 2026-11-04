@@ -19,6 +19,9 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, UUID> {
 
     List<Enrollment> findByGroupIdAndStatus(UUID groupId, Enrollment.Status status);
 
+    @Query("select distinct e.studentId from Enrollment e where e.termId = :termId")
+    Set<UUID> findStudentIdsByTermId(UUID termId);
+
     long countByGroupIdAndStatus(UUID groupId, Enrollment.Status status);
 
     /** Grupos activos del estudiante (base del ABAC del docente sobre el estudiante). */
