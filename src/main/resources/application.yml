@@ -49,7 +49,7 @@ spring:
       enabled: true
   servlet:
     multipart:
-      # Las importaciones masivas admiten hasta 20 MB.
+      # Las importaciones masivas admiten hasta 20 MB (las evidencias tienen su propio límite).
       max-file-size: 20MB
       max-request-size: 21MB
   modulith:
@@ -57,6 +57,11 @@ spring:
       # Las publicaciones completadas se borran para que el outbox no crezca sin límite.
       completion-mode: delete
       republish-outstanding-events-on-restart: true
+      externalization:
+        # Publicación de eventos @Externalized en RabbitMQ (opcional).
+        enabled: ${APP_RABBIT_ENABLED:false}
+  rabbitmq:
+    addresses: ${RABBITMQ_ADDRESSES:amqp://guest:guest@localhost:5672}
 
 server:
   port: ${PORT:8080}
@@ -81,6 +86,8 @@ management:
       show-details: when-authorized
       roles: ADMIN
   health:
+    rabbit:
+      enabled: ${APP_RABBIT_ENABLED:false}
     livenessstate:
       enabled: true
     readinessstate:
@@ -184,3 +191,45 @@ app:
       username: ${BREAK_GLASS_USERNAME:}
       password-hash: ${BREAK_GLASS_PASSWORD_HASH:}
       totp-secret: ${BREAK_GLASS_TOTP_SECRET:}
+  rabbit:
+    enabled: ${APP_RABBIT_ENABLED:false}
+  storage:
+    # local (dev/test) o s3 (MinIO, Supabase Storage, Cloudflare R2, AWS S3...).
+    type: ${APP_STORAGE_TYPE:local}
+    local:
+      directory: ${APP_STORAGE_LOCAL_DIR:}
+      public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
+    s3:
+      endpoint: ${S3_ENDPOINT:}
+      region: ${S3_REGION:us-east-1}
+      bucket: ${S3_BUCKET:retencion}
+      access-key: ${S3_ACCESS_KEY:}
+      secret-key: ${S3_SECRET_KEY:}
+      create-bucket: ${S3_CREATE_BUCKET:false}
+  antivirus:
+    # clamav (producción) o signature (solo detecta EICAR: dev/test).
+    mode: ${APP_ANTIVIRUS_MODE:clamav}
+    host: ${CLAMAV_HOST:localhost}
+    port: ${CLAMAV_PORT:3310}
+    timeout: 20s
+  justifications:
+    max-evidence-size: ${APP_EVIDENCE_MAX_SIZE:5MB}
+    max-evidences-per-request: 5
+    download-url-ttl: 5m
+  mail:
+    # logging (dev: no envía), graph (Microsoft Graph), resend, memory (tests).
+    provider: ${APP_MAIL_PROVIDER:logging}
+    dispatch-enabled: ${APP_MAIL_DISPATCH_ENABLED:true}
+    from: ${APP_MAIL_FROM:}
+    portal-url: ${APP_PORTAL_URL:http://localhost:3000}
+    webhook-secret: ${APP_MAIL_WEBHOOK_SECRET:}
+    max-attempts: 8
+    backoff-base: 1m
+    backoff-max: 6h
+    graph:
+      tenant-id: ${APP_MAIL_GRAPH_TENANT_ID:}
+      client-id: ${APP_MAIL_GRAPH_CLIENT_ID:}
+      client-secret: ${APP_MAIL_GRAPH_CLIENT_SECRET:}
+      mailbox: ${APP_MAIL_GRAPH_MAILBOX:}
+    resend:
+      api-key: ${APP_MAIL_RESEND_API_KEY:}
