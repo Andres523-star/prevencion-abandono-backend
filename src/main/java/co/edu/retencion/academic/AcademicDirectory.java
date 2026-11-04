@@ -1,6 +1,7 @@
 package co.edu.retencion.academic;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -12,7 +13,15 @@ public interface AcademicDirectory {
 
     Optional<ProgramInfo> findProgramByCode(String code);
 
+    /** Los programas, ordenados por código (particiones del lote nocturno de riesgo). */
+    List<ProgramInfo> listPrograms();
+
     Optional<TermInfo> findTermByCode(String code);
+
+    Optional<TermInfo> findTerm(UUID termId);
+
+    /** Todos los periodos, del más antiguo al más reciente (exportación del dataset de entrenamiento). */
+    List<TermInfo> listTerms();
 
     Optional<UUID> findSubjectId(UUID programId, String subjectCode);
 

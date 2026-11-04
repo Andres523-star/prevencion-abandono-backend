@@ -94,6 +94,28 @@ public class AcademicDirectoryService implements AcademicDirectory, AcademicCata
 
     @Override
     @Transactional(readOnly = true)
+    public java.util.List<ProgramInfo> listPrograms() {
+        return programs.findAll().stream().map(AcademicDirectoryService::info)
+                .sorted(java.util.Comparator.comparing(ProgramInfo::code)).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<TermInfo> findTerm(UUID termId) {
+        return terms.findById(termId).map(AcademicDirectoryService::info);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<TermInfo> listTerms() {
+        java.util.List<TermInfo> all = new java.util.ArrayList<>(terms.findAllByOrderByStartDateDesc().stream()
+                .map(AcademicDirectoryService::info).toList());
+        java.util.Collections.reverse(all);
+        return all;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<UUID> findSubjectId(UUID programId, String subjectCode) {
         return subjects.findByProgramIdAndCodeIgnoreCase(programId, subjectCode.trim()).map(Subject::getId);
     }
