@@ -39,7 +39,7 @@
         <embedded-postgres-binaries.version>16.15.0</embedded-postgres-binaries.version>
         <jacoco.version>0.8.13</jacoco.version>
         <commons-csv.version>1.14.1</commons-csv.version>
-        <poi.version>5.5.1</poi.version>
+        <poi.version>6.0.0</poi.version>
         <datafaker.version>2.7.0</datafaker.version>
         <minio.version>8.5.17</minio.version>
         <anthropic.version>3.4.0</anthropic.version>
