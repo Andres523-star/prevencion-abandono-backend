@@ -1,0 +1,9 @@
+# Entrenamiento fuera de línea del modelo de deserción (no forma parte del backend).
+numpy>=2.1
+pandas>=2.2
+scikit-learn>=1.6
+lightgbm>=4.5
+onnx>=1.17
+onnxmltools>=1.13
+skl2onnx>=1.18
+onnxruntime>=1.20
