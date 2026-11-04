@@ -101,3 +101,37 @@ permitir el ingreso con cualquier correo.
 
 **Revisión humana:** pendiente por el equipo (en especial el texto de las plantillas de correo
 y la elección del proveedor de correo).
+
+### Fase 4 — Motor de riesgo e IA (2026-11-04)
+
+**Generado por IA:**
+- Módulo `ai`: anonimizador con lista blanca de rutas y detector de PII (payload revalidado antes de
+  enviar), redactor de texto libre (regex + diccionario de nombres colombianos), cliente Claude con el
+  SDK oficial de Java (salida estructurada + JSON Schema estricto local, reintento por salida inválida,
+  presupuesto diario de tokens, bulkhead/rate limiter/circuit breaker, fallback a reglas), prompts y
+  esquemas versionados, catálogo de 11 recursos de apoyo con elegibilidad evaluada en el backend y
+  agente de retención con *tool use* de solo lectura (solo borradores).
+- Módulo `risk`: 9 reglas configurables en caliente (el estrato no suma nunca), `RulesScorer` y
+  `MlScorer` (ONNX Runtime), orquestador híbrido, historial append-only con versiones (reglas, modelo,
+  prompt, hash del payload, tokens), cola de trabajo con antirrebote para no bloquear al docente,
+  planes de apoyo por umbral (plantilla Prototype o IA, aprobación humana, marcadores `{{nombre}}`),
+  lote nocturno con Spring Batch particionado por programa, métricas de sesgo con supresión de celdas,
+  exportación del dataset seudonimizado, registro/comparación/aprobación de modelos y activación por
+  configuración.
+- `ml/train.py`: LightGBM + calibración isotónica con validación temporal, métricas por programa y
+  banda de estrato, exportación ONNX (probado de punta a punta con datos sintéticos; el ONNX generado
+  se usa como fixture en `OnnxModelRuntimeTest`).
+- Migración `V4__motor_de_riesgo_e_ia.sql`, APIs públicas nuevas en `records`, `students` y
+  `academic`, documentación (`docs/motor-de-riesgo.md`, `docs/modelo-predictivo.md`) y variables
+  nuevas en `.env.example` y `render.yaml`.
+- Pruebas (125 unitarias/arquitectura + 128 de integración, `./mvnw verify` verde): anonimizador sin PII y lista blanca (unitarias e integración capturando las peticiones a
+  WireMock), JSON válido/inválido/timeout/429/5xx/rechazo, fallback, presupuesto e interruptor,
+  historial, cambio de umbral sin redeploy, sesgo del estrato, planes, lote, agente y ciclo del modelo.
+
+**Decisiones propuestas por la IA (pendientes de validar):** pesos y umbrales por defecto de las
+reglas; texto libre y señales sensibles apagados por defecto; la IA no puede bajar ni (por defecto)
+subir el nivel; modelo capaz `claude-opus-5-5` y económico `claude-haiku-5-5`; etiqueta de deserción
+"no inscrito en el periodo siguiente".
+
+**Revisión humana:** pendiente por el equipo (en especial los prompts, los pesos de las reglas, el
+diccionario de nombres y la revisión jurídica del envío seudonimizado a la API de IA).
