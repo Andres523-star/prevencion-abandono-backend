@@ -44,7 +44,7 @@
         <minio.version>8.5.17</minio.version>
         <anthropic.version>3.4.0</anthropic.version>
         <onnxruntime.version>1.31.1</onnxruntime.version>
-        <json-schema-validator.version>1.5.9</json-schema-validator.version>
+        <json-schema-validator.version>3.0.8</json-schema-validator.version>
     </properties>
 
     <dependencyManagement>
