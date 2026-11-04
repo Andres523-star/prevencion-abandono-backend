@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Plan de apoyo por asistencia (support-plan.v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["actions", "studentMessage"],
+  "properties": {
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "title", "description", "priority", "suggestedOwner", "resourceId", "dueInDays"],
+        "properties": {
+          "type": {"type": "string", "enum": ["NIVELACION", "TUTORIA", "AJUSTE_HORARIO", "APOYO_TRANSPORTE",
+            "CONTACTO_DOCENTE", "REMISION_BIENESTAR", "APOYO_ECONOMICO", "CONSEJERIA", "OTRO"]},
+          "title": {"type": "string", "minLength": 1, "maxLength": 120},
+          "description": {"type": "string", "minLength": 1, "maxLength": 600},
+          "priority": {"type": "string", "enum": ["ALTA", "MEDIA", "BAJA"]},
+          "suggestedOwner": {"type": "string", "enum": ["DOCENTE", "CONSEJERO", "PSICOLOGO", "COORDINADOR"]},
+          "resourceId": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "dueInDays": {"type": "integer", "minimum": 0, "maximum": 60}
+        }
+      }
+    },
+    "studentMessage": {"type": "string", "minLength": 1, "maxLength": 1200}
+  }
+}
