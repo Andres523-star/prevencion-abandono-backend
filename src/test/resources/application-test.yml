@@ -22,6 +22,19 @@ app:
       enabled: true
   audit:
     partition-months-ahead: 1
+  storage:
+    type: local
+  antivirus:
+    mode: signature
+  mail:
+    provider: memory
+    # Los tests despachan explícitamente con MailDispatcher.dispatch().
+    dispatch-enabled: false
+    webhook-secret: test-webhook-secret
+    portal-url: https://portal.universidad.edu.co
+  justifications:
+    # El reintento de escaneo se invoca explícitamente en los tests.
+    rescan-interval-ms: 86400000
 
 logging:
   level:

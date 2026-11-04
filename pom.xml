@@ -41,6 +41,7 @@
         <commons-csv.version>1.14.1</commons-csv.version>
         <poi.version>5.5.1</poi.version>
         <datafaker.version>2.7.0</datafaker.version>
+        <minio.version>8.5.17</minio.version>
     </properties>
 
     <dependencyManagement>
@@ -169,6 +170,25 @@
             <version>${datafaker.version}</version>
         </dependency>
 
+        <!-- Correo (plantillas), mensajería y almacenamiento de evidencias -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-events-amqp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>${minio.version}</version>
+        </dependency>
+
         <!-- Documentación OpenAPI -->
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -236,6 +256,16 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>rabbitmq</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>minio</artifactId>
             <scope>test</scope>
         </dependency>
         <!-- Respaldo cuando no hay Docker (p. ej. portátil de desarrollo en Windows) -->
