@@ -33,7 +33,7 @@
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <bouncycastle.version>1.86</bouncycastle.version>
         <resilience4j.version>2.4.0</resilience4j.version>
-        <archunit.version>1.4.2</archunit.version>
+        <archunit.version>1.5.1</archunit.version>
         <wiremock.version>3.13.2</wiremock.version>
         <embedded-postgres.version>2.2.2</embedded-postgres.version>
         <embedded-postgres-binaries.version>16.15.0</embedded-postgres-binaries.version>
