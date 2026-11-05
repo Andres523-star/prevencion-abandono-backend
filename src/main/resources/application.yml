@@ -271,6 +271,13 @@ app:
     heartbeat: 10s
     send-capacity: ${APP_REALTIME_SEND_PER_MINUTE:60}
     send-period: 1m
+  analytics:
+    # Refresca las vistas de analítica cuando hay cambios (y siempre, una vez por noche).
+    refresh-enabled: ${APP_ANALYTICS_REFRESH_ENABLED:true}
+    refresh-check-ms: 30000
+  reports:
+    worker-enabled: ${APP_REPORTS_WORKER_ENABLED:true}
+    poll-interval-ms: 5000
   risk:
     # Procesa la cola del motor (reanálisis por eventos y planes de apoyo).
     worker-enabled: ${APP_RISK_WORKER_ENABLED:true}
