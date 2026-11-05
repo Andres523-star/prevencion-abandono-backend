@@ -132,6 +132,12 @@ services:
       # --- RabbitMQ no está disponible como servicio gestionado en Render: eventos solo internos
       - key: APP_RABBIT_ENABLED
         value: "false"
+      # --- Tiempo real (STOMP). Con una sola instancia basta el broker simple; con varias instancias
+      #     hace falta un RabbitMQ externo con rabbitmq_stomp y APP_REALTIME_BROKER=relay.
+      - key: APP_REALTIME_BROKER
+        value: simple
+      - key: APP_REALTIME_SEND_PER_MINUTE
+        value: "60"
       # --- IA (Claude). Sin clave, el motor de riesgo funciona solo con reglas.
       - key: ANTHROPIC_API_KEY
         sync: false

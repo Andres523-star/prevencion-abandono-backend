@@ -39,10 +39,14 @@ Requisito del proyecto: aplicar los **5 patrones creacionales** y, de los estruc
 | **Adapter** | `ai.infrastructure.AnthropicLlmGateway` | Adapta el SDK oficial de Anthropic al puerto `LlmGateway` y traduce sus excepciones (429, 5xx, red, timeout) a un motivo normalizado (`AiFailure`). |
 | **Adapter** | `risk.infrastructure.OnnxModelRuntime` | Adapta ONNX Runtime al puerto `MlModelRuntime` y al `ProbabilityModel` del dominio (tensor `[N,2]`, `[N,1]` o ZipMap). |
 | **Decorator** | `ai.infrastructure.BudgetedLlmGateway`, `ResilientLlmGateway` | Se apilan sobre el adaptador de Claude: `presupuesto diario de tokens → bulkhead + rate limiter + circuit breaker → SDK`. |
+| **Adapter** | `realtime.infrastructure.StompRealtimePublisher` | Adapta `SimpMessagingTemplate` (broker simple o relay sobre RabbitMQ) al puerto `RealtimePublisher`; alertas, campanita y chat no conocen STOMP. |
+| **Decorator** | `realtime.infrastructure.RealtimeSessions` | Envuelve el manejador WebSocket de Spring (`WebSocketHandlerDecoratorFactory`) para registrar cada conexión y poder cerrarla al vencer el token o al revocar la sesión, sin tocar el manejador original. |
 
 ## Complementarios (no exigidos)
 
 - **Strategy:** `risk.domain.RiskRule` (una regla por aspecto: promedio, faltas, tendencia, conducta, bienestar, causas, contexto socioeconómico), `imports.application.RowHandler` (una estrategia por tipo de importación, incluida `GradeRowHandler`) y `common.security.authorization.ScopeRules` (una regla ABAC por rol).
+- **Strategy:** `realtime.SubscriptionAuthorizer` (un autorizador por familia de destinos STOMP; el del chat es `ChatSubscriptionAuthorizer`).
+- **State:** `retention.domain.RetentionCase` y `interventions.domain.Intervention` (las transiciones válidas viven en la entidad; una transición inválida es 409).
 - **Template Method / Observer:** eventos de dominio de Spring Modulith (`UserProvisioned` → `StudentUserLinker`, `SettingChanged` → `CachingSettingsProxy`).
 
 ## Pruebas que los cubren
@@ -60,3 +64,4 @@ Requisito del proyecto: aplicar los **5 patrones creacionales** y, de los estruc
 - `RiskDomainTest`: Strategy de reglas, Prototype de planes y scorers.
 - `OnnxModelRuntimeTest`: Adapter de ONNX Runtime con un modelo real construido en la prueba.
 - `RiskEngineIT` y `MlModelIT`: Adapter + Decorators de Claude (WireMock) y Factory Method del scorer.
+- `RealtimeIT`: Adapter del publicador STOMP y Decorator de sesiones (cierre por vencimiento y logout) con un cliente STOMP real.

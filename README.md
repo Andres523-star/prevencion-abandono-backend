@@ -42,6 +42,12 @@ Pruebas completas (unitarias + integración + arquitectura + cobertura):
 | `wellbeing` | Evaluaciones físicas/psicológicas y remisiones (solo PSICOLOGO, cifrado, auditoría de lectura) | `WellbeingSignals` |
 | `ai` | Puerta única hacia Claude: anonimizador con lista blanca, redactor de PII, salida validada con JSON Schema, presupuesto de tokens, resiliencia, catálogo de recursos de apoyo y agente de retención | `Anonymizer`, `RiskExplainer`, `SupportPlanWriter`, `ResourceCatalog`, SPI `RetentionAgentTools` |
 | `risk` | Motor de riesgo híbrido (reglas configurables o modelo ONNX propio + explicación de IA), historial de análisis, planes de apoyo, lote nocturno (Spring Batch), métricas de sesgo, dataset y registro de modelos | `RiskQueries`, `RiskAssessed` |
+| `realtime` | WebSocket + STOMP (`/ws`, SockJS), token en el CONNECT, autorización de suscripciones, cierre por vencimiento o revocación | `RealtimePublisher`, SPI `SubscriptionAuthorizer` |
+| `alerts` | Alertas de riesgo con deduplicación, asignación automática (consejero o bienestar) y escalamiento | `AlertAssigned` |
+| `notifications` | Campanita interna en tiempo real (sin correo), motivo legible, abrir chat y enlace de cita | solo REST/eventos |
+| `chat` | Chat docente-estudiante cifrado con adjuntos escaneados (PDF, .docx, audio) y vista dividida | `ChatMessageSent` |
+| `interventions` | Intervenciones con notas por rol, conversión del plan de apoyo y medición antes/después | `InterventionAssigned` |
+| `retention` | Casos de retención por etapas, seguimiento 7/15/30, cierre con causa, embudo y campaña de reingreso | `RetentionFollowUpDue` |
 
 Capas por módulo: `api` → `application` → `domain` ← `infrastructure`. Límites verificados por
 `ModularityTest` (Modulith) y `ArchitectureRulesTest` (ArchUnit).
@@ -93,6 +99,19 @@ Capas por módulo: `api` → `application` → `domain` ← `infrastructure`. L�
 | `POST /api/v1/risk/batch-runs` | ADMIN | Lanza el lote nocturno |
 | `POST /api/v1/ml/dataset-exports`, `/ml/models`, `GET /ml/models/{v}/comparison`, `POST /ml/models/{v}/approve` | ADMIN | Modelo predictivo propio (ver docs/modelo-predictivo.md) |
 | `GET /api/v1/ai/usage` | ADMIN | Tokens del día y presupuesto |
+| `WS /ws` (STOMP: `CONNECT` con `Authorization: Bearer`) | autenticado | Colas `/user/queue/notifications`, `/user/queue/chat`, `/user/queue/chat-receipts`; envío `/app/chat.send` |
+| `GET /api/v1/alerts`, `/students/{id}/alerts`, `POST /alerts/{id}/{open,attend,dismiss}` | ADMIN, CONSEJERO, PSICOLOGO, COORDINADOR (alcance) | Alertas y su ciclo |
+| `GET /api/v1/notifications`, `/unread-count`, `POST /{id}/read`, `/read-all` | autenticado | Campanita propia |
+| `GET/PUT/DELETE /api/v1/users/me/appointment-link` | DOCENTE | Enlace de citas (https y dominios permitidos) |
+| `POST /api/v1/chats`, `GET /chats`, `GET/POST /chats/{id}/messages` | docente del grupo / participantes | Abrir chat, conversaciones y mensajes |
+| `POST /api/v1/chats/{id}/attachments`, `GET /chat-attachments/{id}/download-url` | participantes | Adjuntos (antivirus antes de guardar) y URL prefirmada |
+| `GET /api/v1/chats/{id}/student-context` | docente dueño, ADMIN | Perfil y series de riesgo para la vista dividida |
+| `GET /api/v1/admin/chats/{id}/messages` | ADMIN + `X-Access-Reason` | Lectura excepcional del chat (auditada) |
+| `POST /api/v1/students/{id}/interventions`, `/interventions/{id}/{start,resolve,notes}` | personal según alcance | Intervenciones y notas por rol |
+| `POST /api/v1/support-plans/{id}/convert` | CONSEJERO, PSICOLOGO, COORDINADOR | Edita, aprueba y convierte el plan en intervenciones |
+| `POST /api/v1/retention-cases`, `/retention-cases/{id}/{advance,contacts,tasks,close}` | personal según alcance | Casos de retención |
+| `POST /api/v1/students/me/retention-requests` | ESTUDIANTE | "Necesito ayuda / estoy pensando en retirarme" |
+| `GET /api/v1/retention/funnel`, `GET/POST /retention/campaigns` | personal / ADMIN, COORDINADOR | Embudo y campaña de reingreso (requiere aprobación) |
 
 Errores siempre en `application/problem+json` con campo `code` estable.
 
@@ -106,4 +125,5 @@ Errores siempre en `application/problem+json` con campo `code` estable.
 - [Asistencia, justificaciones y correo de avisos](docs/asistencia-y-correo.md)
 - [Rendimiento (asistencia a 5 millones de filas)](docs/rendimiento.md)
 - [Motor de riesgo e IA](docs/motor-de-riesgo.md) y [modelo predictivo propio](docs/modelo-predictivo.md) (`ml/train.py`)
+- [Tiempo real, alertas, campanita, chat, intervenciones y retención](docs/tiempo-real-y-retencion.md)
 - Diagramas de módulos (PlantUML): `target/spring-modulith-docs/` tras `./mvnw verify`
