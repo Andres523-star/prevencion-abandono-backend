@@ -5,14 +5,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -24,33 +21,9 @@ import co.edu.retencion.support.AttendanceWorld.Actor;
  */
 public abstract class CampusIntegrationTest extends RiskIntegrationTest {
 
-    /** Publicaciones pendientes antes de la prueba (fallidas de otras pruebas): no se esperan. */
-    private final Set<String> pendingBefore = new HashSet<>();
-
-    @BeforeEach
-    void snapshotPendingPublications() {
-        pendingBefore.clear();
-        pendingBefore.addAll(pendingPublications());
-    }
-
-    private List<String> pendingPublications() {
-        return jdbc.queryForList("SELECT id::text FROM event_publication WHERE completion_date IS NULL", String.class);
-    }
-
-    /**
-     * Espera a que terminen los listeners de eventos de esta prueba. Spring Modulith habilita
-     * {@code @EnableAsync}, así que los {@code @ApplicationModuleListener} corren en otro hilo; como
-     * las publicaciones completadas se borran ({@code completion-mode: delete}), basta con esperar a
-     * que no quede ninguna pendiente nueva (una cadena de eventos siempre deja al menos una).
-     */
-    protected void awaitListeners() throws InterruptedException {
-        long deadline = System.nanoTime() + 15_000_000_000L;
-        while (System.nanoTime() < deadline) {
-            if (pendingBefore.containsAll(pendingPublications())) {
-                return;
-            }
-            Thread.sleep(25);
-        }
+    /** Espera explícita a los listeners (antes de consultar la base directamente o llamar servicios). */
+    protected void awaitListeners() {
+        listeners.await();
     }
 
     /**

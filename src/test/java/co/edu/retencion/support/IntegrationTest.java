@@ -1,5 +1,6 @@
 package co.edu.retencion.support;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -10,15 +11,18 @@ import java.util.UUID;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.MockMvcBuilderCustomizer;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -53,6 +57,8 @@ public abstract class IntegrationTest {
     private UserRepository userRepository;
     @Autowired
     private TransactionTemplate tx;
+    @Autowired
+    protected EventListenerAwaiter listeners;
 
     @TestConfiguration(proxyBeanMethods = false)
     static class TestClockConfig {
@@ -61,6 +67,27 @@ public abstract class IntegrationTest {
         @Primary
         MutableClock testClock() {
             return new MutableClock();
+        }
+
+        @Bean
+        EventListenerAwaiter eventListenerAwaiter(JdbcTemplate jdbc) {
+            return new EventListenerAwaiter(jdbc);
+        }
+
+        /**
+         * Cada petición de MockMvc espera a los listeners en curso antes de ejecutarse (para leer lo
+         * que dejaron acciones anteriores, incluso llamadas directas a servicios) y después (para que
+         * las consultas a la base de la prueba vean sus efectos). Elimina los fallos intermitentes por
+         * listeners asíncronos en todas las fases.
+         */
+        @Bean
+        MockMvcBuilderCustomizer awaitEventListeners(EventListenerAwaiter awaiter) {
+            return builder -> builder
+                    .defaultRequest(get("/").with(request -> {
+                        awaiter.await();
+                        return request;
+                    }))
+                    .alwaysDo(result -> awaiter.await());
         }
     }
 
@@ -71,6 +98,12 @@ public abstract class IntegrationTest {
         // Claude simulado: todas las pruebas comparten el mismo contexto de Spring.
         FakeClaude.get().register(registry);
         TestSecrets.register(registry);
+    }
+
+    /** Que los listeners de la prueba anterior no se mezclen con esta (p. ej. al limpiar colas). */
+    @BeforeEach
+    void settleListeners() {
+        listeners.await();
     }
 
     @AfterEach
