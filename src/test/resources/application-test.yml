@@ -36,6 +36,12 @@ app:
     # El reintento de escaneo se invoca explícitamente en los tests.
     rescan-interval-ms: 86400000
 
+  # Las pruebas refrescan y generan explícitamente (POST /analytics/refresh, ReportWorker.drain).
+  analytics:
+    refresh-enabled: false
+  reports:
+    worker-enabled: false
+
   risk:
     # Las pruebas procesan la cola y el lote explícitamente (RiskWorker.drain, RiskBatchLauncher.run).
     worker-enabled: false
