@@ -126,6 +126,10 @@ public class UserAdminService {
         }
         User user = load(id);
         user.changeStatus(status, clock.instant());
+        if (status == UserStatus.DISABLED) {
+            // Cierra también las conexiones en tiempo real del usuario.
+            events.publishEvent(new co.edu.retencion.common.security.SessionRevoked(user.getId(), null));
+        }
         return mapper.toSummary(users.saveAndFlush(user));
     }
 

@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,8 @@ import co.edu.retencion.auth.infrastructure.AccessTokenIssuer;
 import co.edu.retencion.auth.infrastructure.AuthProperties;
 import co.edu.retencion.auth.infrastructure.SecureTokens;
 import co.edu.retencion.common.error.DomainException;
+import co.edu.retencion.common.security.SessionRevoked;
+import co.edu.retencion.common.security.CurrentUser;
 import co.edu.retencion.common.id.UuidV7;
 import co.edu.retencion.users.UserAccount;
 import co.edu.retencion.users.UserDirectory;
@@ -40,9 +43,11 @@ public class SessionService {
     private final AuditTrail audit;
     private final AuthProperties properties;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
     public SessionService(RefreshTokenRepository refreshTokens, AccessTokenIssuer accessTokens, UserDirectory users,
-                          AuditTrail audit, AuthProperties properties, Clock clock) {
+                          AuditTrail audit, AuthProperties properties, Clock clock, ApplicationEventPublisher events) {
+        this.events = events;
         this.refreshTokens = refreshTokens;
         this.accessTokens = accessTokens;
         this.users = users;
@@ -77,6 +82,7 @@ public class SessionService {
 
         if (token.isConsumed()) {
             refreshTokens.revokeFamily(token.getFamilyId(), now, RevocationReason.REUSE_DETECTED);
+            events.publishEvent(new SessionRevoked(token.getUserId(), token.getFamilyId()));
             audit.recordAs(token.getUserId(), "AUTH_REFRESH_REUSE_DETECTED", "Session",
                     token.getFamilyId().toString(), AuditOutcome.FAILURE, Map.of());
             throw new DomainException(AuthProblems.REFRESH_TOKEN_REUSED,
@@ -89,6 +95,7 @@ public class SessionService {
         Optional<UserAccount> user = users.findById(token.getUserId()).filter(UserAccount::isActive);
         if (user.isEmpty()) {
             refreshTokens.revokeFamily(token.getFamilyId(), now, RevocationReason.ACCOUNT_DISABLED);
+            events.publishEvent(new SessionRevoked(token.getUserId(), null));
             throw new DomainException(AuthProblems.ACCOUNT_DISABLED, "La cuenta está desactivada");
         }
         try {
@@ -96,6 +103,7 @@ public class SessionService {
             MfaPolicy.enforce(user.get().roles(), token.isMfa());
         } catch (DomainException mfaRequired) {
             refreshTokens.revokeFamily(token.getFamilyId(), now, RevocationReason.MFA_REQUIRED);
+            events.publishEvent(new SessionRevoked(token.getUserId(), token.getFamilyId()));
             throw mfaRequired;
         }
 
@@ -108,6 +116,7 @@ public class SessionService {
     @Transactional
     public void logout(UUID sessionId) {
         refreshTokens.revokeFamily(sessionId, clock.instant(), RevocationReason.LOGOUT);
+        CurrentUser.get().ifPresent(u -> events.publishEvent(new SessionRevoked(u.userId(), sessionId)));
     }
 
     /** Limpieza diaria de tokens de sesiones vencidas hace más de 7 días. */
