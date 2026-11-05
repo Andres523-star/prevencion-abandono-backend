@@ -20,4 +20,18 @@ public interface RiskStudentStateRepository extends JpaRepository<RiskStudentSta
     /** Último nivel por estudiante para las métricas de sesgo. */
     @Query("select s from RiskStudentState s where s.lastLevel is not null")
     List<RiskStudentState> findAssessed();
+
+    @Query("""
+            select s from RiskStudentState s
+            where s.lastLevel in :levels
+              and (:anyProgram = true or s.programId in :programs)
+              and (:anyStudent = true or s.studentId in :students)
+              and (:fromStart = true or s.studentId > :after)
+            order by s.studentId
+            """)
+    List<RiskStudentState> page(java.util.Collection<co.edu.retencion.risk.RiskLevel> levels, boolean anyProgram,
+                                java.util.Collection<UUID> programs, boolean anyStudent, java.util.Collection<UUID> students,
+                                boolean fromStart, UUID after, org.springframework.data.domain.Limit limit);
+
+    List<RiskStudentState> findByStudentIdIn(java.util.Collection<UUID> students);
 }

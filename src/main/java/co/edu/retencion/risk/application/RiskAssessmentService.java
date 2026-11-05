@@ -44,11 +44,14 @@ public class RiskAssessmentService implements RiskQueries {
     static final String GUARDRAIL = "La IA recomienda, no decide: toda acción requiere revisión y aprobación humana.";
 
     private final RiskAssessmentRepository assessments;
+    private final co.edu.retencion.risk.domain.RiskStudentStateRepository states;
     private final ResourceCatalog catalog;
     private final ObjectMapper mapper;
 
-    public RiskAssessmentService(RiskAssessmentRepository assessments, ResourceCatalog catalog, ObjectMapper mapper) {
+    public RiskAssessmentService(RiskAssessmentRepository assessments, ResourceCatalog catalog, ObjectMapper mapper,
+                                 co.edu.retencion.risk.domain.RiskStudentStateRepository states) {
         this.assessments = assessments;
+        this.states = states;
         this.catalog = catalog;
         this.mapper = mapper;
     }
@@ -100,6 +103,25 @@ public class RiskAssessmentService implements RiskQueries {
     public Optional<AssessmentView> latestView(UUID studentId) {
         Set<Role> roles = CurrentUser.require().roles();
         return assessments.findFirstByStudentIdOrderByCreatedAtDescIdDesc(studentId).map(a -> view(a, roles));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RiskRow> page(RiskListQuery q) {
+        java.util.Set<UUID> none = java.util.Set.of(new UUID(0, 0));
+        return states.page(q.levels(), q.programIds() == null, q.programIds() == null ? none : q.programIds(),
+                        q.studentIds() == null, q.studentIds() == null ? none : q.studentIds(), q.after() == null, q.after(),
+                        org.springframework.data.domain.Limit.of(q.limit())).stream()
+                .map(s -> new RiskRow(s.getStudentId(), s.getProgramId(), s.getSemester(), s.getLastLevel(), s.getLastScore(),
+                        s.getLastAssessedAt())).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Map<RiskLevel, Long> levelCounts(java.util.Collection<UUID> studentIds) {
+        return states.findByStudentIdIn(studentIds).stream().filter(s -> s.getLastLevel() != null)
+                .collect(java.util.stream.Collectors.groupingBy(co.edu.retencion.risk.domain.RiskStudentState::getLastLevel,
+                        java.util.stream.Collectors.counting()));
     }
 
     @Override

@@ -21,6 +21,12 @@ public interface RiskQueries {
     /** Detalle de un análisis: factores y acciones sugeridas. */
     Optional<AssessmentSummary> summary(UUID assessmentId);
 
+    /** Último nivel de cada estudiante, paginado por keyset sobre el id del estudiante. */
+    List<RiskRow> page(RiskListQuery query);
+
+    /** Cuántos de esos estudiantes hay en cada nivel. */
+    java.util.Map<RiskLevel, Long> levelCounts(java.util.Collection<UUID> studentIds);
+
     /**
      * @param assessmentId análisis
      * @param level        nivel
@@ -28,6 +34,20 @@ public interface RiskQueries {
      * @param scoreType    tipo de puntaje
      * @param assessedAt   fecha
      */
+    /**
+     * @param programIds {@code null} = todos
+     * @param studentIds {@code null} = todos
+     * @param after      cursor (id del último estudiante de la página anterior)
+     */
+    record RiskListQuery(java.util.Set<RiskLevel> levels, java.util.Set<UUID> programIds, java.util.Set<UUID> studentIds,
+                         UUID after, int limit) {
+    }
+
+    /** Fila de un listado por nivel (sin factores: el motivo se consulta aparte, según el rol). */
+    record RiskRow(UUID studentId, UUID programId, Integer semester, RiskLevel level, BigDecimal score,
+                   Instant assessedAt) {
+    }
+
     record LatestRisk(UUID assessmentId, RiskLevel level, BigDecimal score, ScoreType scoreType, Instant assessedAt) {
     }
 
