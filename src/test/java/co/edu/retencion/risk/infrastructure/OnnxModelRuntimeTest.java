@@ -32,6 +32,15 @@ class OnnxModelRuntimeTest {
         }
 
         @Override
+        public void put(String key, java.nio.file.Path file, String mediaType) {
+            try {
+                objects.put(key, java.nio.file.Files.readAllBytes(file));
+            } catch (java.io.IOException ex) {
+                throw new java.io.UncheckedIOException(ex);
+            }
+        }
+
+        @Override
         public byte[] get(String key) {
             return objects.get(key);
         }

@@ -49,6 +49,16 @@ public class S3ObjectStorage implements ObjectStorage {
     }
 
     @Override
+    public void put(String key, java.nio.file.Path file, String mediaType) {
+        run(() -> {
+            try (java.io.InputStream in = java.nio.file.Files.newInputStream(file)) {
+                return client.putObject(PutObjectArgs.builder().bucket(bucket).object(key)
+                        .stream(in, java.nio.file.Files.size(file), -1).contentType(mediaType).build());
+            }
+        });
+    }
+
+    @Override
     public byte[] get(String key) {
         return run(() -> {
             try (InputStream in = client.getObject(GetObjectArgs.builder().bucket(bucket).object(key).build())) {

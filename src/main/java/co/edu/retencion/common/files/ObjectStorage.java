@@ -13,6 +13,9 @@ public interface ObjectStorage {
 
     void put(String key, byte[] content, String mediaType);
 
+    /** Sube un archivo sin cargarlo en memoria (reportes grandes). */
+    void put(String key, java.nio.file.Path file, String mediaType);
+
     byte[] get(String key);
 
     void delete(String key);

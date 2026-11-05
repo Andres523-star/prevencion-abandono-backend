@@ -63,6 +63,15 @@ public class LocalObjectStorage implements ObjectStorage {
     }
 
     @Override
+    public void put(String key, java.nio.file.Path file, String mediaType) {
+        try {
+            Files.copy(file, resolve(key), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+    }
+
+    @Override
     public byte[] get(String key) {
         try {
             return Files.readAllBytes(resolve(key));
