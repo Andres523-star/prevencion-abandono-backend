@@ -73,6 +73,10 @@ public class User {
     @Column(name = "display_name_ciphertext")
     private String displayName;
 
+    /** Página de reservas de citas del docente (validada en la capa de aplicación). */
+    @Column(name = "appointment_link")
+    private String appointmentLink;
+
     @Column(name = "last_login_at")
     private Instant lastLoginAt;
 
@@ -201,6 +205,11 @@ public class User {
 
     public void changeStatus(UserStatus newStatus, Instant now) {
         this.status = newStatus;
+        this.updatedAt = now;
+    }
+
+    public void changeAppointmentLink(String link, Instant now) {
+        this.appointmentLink = link;
         this.updatedAt = now;
     }
 
