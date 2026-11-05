@@ -46,6 +46,20 @@ public class UserDirectoryService implements UserDirectory {
 
     @Override
     @Transactional(readOnly = true)
+    public java.util.List<UUID> activeUsersWithRole(Role role, UUID programId) {
+        return users.findActiveByRole(role).stream()
+                .filter(u -> programId == null || u.getProgramIds().isEmpty() || u.getProgramIds().contains(programId))
+                .map(User::getId).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<String> appointmentLink(UUID userId) {
+        return users.findById(userId).map(User::getAppointmentLink);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<UserAccount> findById(UUID userId) {
         return users.findById(userId).map(UserDirectoryService::toAccount);
     }

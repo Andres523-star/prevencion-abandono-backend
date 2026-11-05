@@ -29,6 +29,15 @@ public interface UserDirectory {
 
     void recordLogin(UUID userId);
 
+    /**
+     * Usuarios activos con el rol; si {@code programId} no es nulo, solo los que tienen ese programa
+     * en su alcance o ninguno (transversales). Ordenados por id. Sirve para asignar alertas.
+     */
+    java.util.List<UUID> activeUsersWithRole(Role role, UUID programId);
+
+    /** Enlace de la agenda de citas del docente (https, dominio permitido), si lo registró. */
+    Optional<String> appointmentLink(UUID userId);
+
     /** Usuario con ese correo (se busca por blind index; el correo no se guarda en claro). */
     Optional<UUID> findIdByEmail(String email);
 

@@ -32,4 +32,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             order by u.id
             """)
     List<User> findByRole(Role role, boolean fromStart, UUID after, Limit limit);
+
+    @Query("""
+            select distinct u from User u join u.roleGrants g
+            where g.role = :role and u.status = co.edu.retencion.users.UserStatus.ACTIVE
+            order by u.id
+            """)
+    List<User> findActiveByRole(Role role);
 }
