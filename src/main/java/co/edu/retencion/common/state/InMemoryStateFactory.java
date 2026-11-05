@@ -30,6 +30,38 @@ public class InMemoryStateFactory implements DistributedStateFactory {
         return new InMemoryTicketStore();
     }
 
+    @Override
+    public SharedCache createCache(String namespace) {
+        return new InMemoryCache();
+    }
+
+    /** Caché en Caffeine; cambiar de generación deja inalcanzables las claves anteriores. */
+    static final class InMemoryCache implements SharedCache {
+
+        private final InMemoryTicketStore entries = new InMemoryTicketStore();
+        private final java.util.concurrent.atomic.AtomicLong generation = new java.util.concurrent.atomic.AtomicLong();
+
+        @Override
+        public Optional<String> get(String key) {
+            return entries.peek(key);
+        }
+
+        @Override
+        public void put(String key, String value, Duration ttl) {
+            entries.put(key, value, ttl);
+        }
+
+        @Override
+        public long generation() {
+            return generation.get();
+        }
+
+        @Override
+        public long nextGeneration() {
+            return generation.incrementAndGet();
+        }
+    }
+
     /** Tickets en Caffeine con vencimiento individual por entrada. */
     static final class InMemoryTicketStore implements OneTimeTicketStore {
 
@@ -59,6 +91,10 @@ public class InMemoryStateFactory implements DistributedStateFactory {
         @Override
         public void put(String key, String value, Duration ttl) {
             cache.put(key, new Ticket(value, ttl));
+        }
+
+        Optional<String> peek(String key) {
+            return Optional.ofNullable(cache.getIfPresent(key)).map(Ticket::value);
         }
 
         @Override

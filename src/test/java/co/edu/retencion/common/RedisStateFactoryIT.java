@@ -16,6 +16,7 @@ import co.edu.retencion.common.ratelimit.RateLimitPolicy;
 import co.edu.retencion.common.ratelimit.RateLimiter;
 import co.edu.retencion.common.state.OneTimeTicketStore;
 import co.edu.retencion.common.state.RedisStateFactory;
+import co.edu.retencion.common.state.SharedCache;
 
 /**
  * Familia Redis de la Abstract Factory contra un Redis real (Testcontainers). Se omite si no
@@ -51,6 +52,18 @@ class RedisStateFactoryIT {
         assertThat(a.claim("jti", Duration.ofMinutes(1))).isFalse();
         assertThat(b.claim("jti", Duration.ofMinutes(1))).isTrue();
         assertThat(factory.ping()).isEqualToIgnoringCase("PONG");
+    }
+
+    @Test
+    void cacheIsSharedAndInvalidatedByGeneration() {
+        SharedCache one = factory.createCache("analitica");
+        SharedCache other = factory.createCache("analitica");
+        long generation = one.generation();
+        one.put(generation + ":k", "v", Duration.ofMinutes(1));
+        assertThat(other.get(generation + ":k")).contains("v");
+        assertThat(factory.createCache("otro").get(generation + ":k")).isEmpty();
+        assertThat(one.nextGeneration()).isEqualTo(generation + 1);
+        assertThat(other.generation()).isEqualTo(generation + 1);
     }
 
     @Test

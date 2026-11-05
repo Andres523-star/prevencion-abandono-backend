@@ -40,6 +40,11 @@ public class RedisStateFactory implements DistributedStateFactory {
         return new RedisTicketStore(connection.sync(), "ticket:" + namespace + ":");
     }
 
+    @Override
+    public SharedCache createCache(String namespace) {
+        return new RedisCache(connection.sync(), "cache:" + namespace + ":");
+    }
+
     /** Comando PING para el health check. */
     public String ping() {
         return connection.sync().ping();
@@ -76,6 +81,39 @@ public class RedisStateFactory implements DistributedStateFactory {
         public boolean claim(String key, Duration ttl) {
             // SET NX PX: solo la primera instancia que lo intente obtiene "OK".
             return "OK".equals(commands.set(prefix + key, "1", SetArgs.Builder.nx().px(ttl.toMillis())));
+        }
+    }
+
+    /** {@code GET} / {@code SET PX} / {@code INCR}: todas las instancias ven la misma generación. */
+    static final class RedisCache implements SharedCache {
+
+        private final io.lettuce.core.api.sync.RedisCommands<String, String> redis;
+        private final String prefix;
+
+        RedisCache(io.lettuce.core.api.sync.RedisCommands<String, String> redis, String prefix) {
+            this.redis = redis;
+            this.prefix = prefix;
+        }
+
+        @Override
+        public java.util.Optional<String> get(String key) {
+            return java.util.Optional.ofNullable(redis.get(prefix + key));
+        }
+
+        @Override
+        public void put(String key, String value, java.time.Duration ttl) {
+            redis.set(prefix + key, value, io.lettuce.core.SetArgs.Builder.px(ttl.toMillis()));
+        }
+
+        @Override
+        public long generation() {
+            String value = redis.get(prefix + "generation");
+            return value == null ? 0 : Long.parseLong(value);
+        }
+
+        @Override
+        public long nextGeneration() {
+            return redis.incr(prefix + "generation");
         }
     }
 }
