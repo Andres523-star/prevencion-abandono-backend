@@ -71,6 +71,8 @@ public class JustificationService {
         AbsenceJustification justification = justifications.save(AbsenceJustification.submit(absence.recordId(),
                 absence.termId(), absence.enrollmentId(), studentId, absence.groupId(), category, description,
                 absence.justificationDeadline(), teacher, clock.instant()));
+        events.publishEvent(new co.edu.retencion.justifications.JustificationSubmitted(justification.getId(), studentId,
+                absence.groupId(), teacher));
         return JustificationView.of(justification, List.of());
     }
 

@@ -47,7 +47,7 @@ import co.edu.retencion.students.StudentRegistry;
  * entrega aparte y únicamente cuando la configuración permite texto libre hacia la IA.
  */
 @Service
-public class StudentRecordsService implements StudentRecords {
+public class StudentRecordsService implements StudentRecords, co.edu.retencion.records.CauseRegistry {
 
     /** Sin periodo de referencia, las observaciones se cuentan en esta ventana. */
     static final int DEFAULT_OBSERVATION_WINDOW_DAYS = 120;
@@ -60,10 +60,13 @@ public class StudentRecordsService implements StudentRecords {
     private final StudentCauseRepository studentCauses;
     private final DropoutCauseRepository causes;
     private final Clock clock;
+    private final co.edu.retencion.records.domain.AttendanceRecordRepository attendance;
 
     public StudentRecordsService(StudentRegistry students, AcademicDirectory academic, AbsenceCounterRepository counters,
                                  GradeRepository grades, ObservationRepository observations,
-                                 StudentCauseRepository studentCauses, DropoutCauseRepository causes, Clock clock) {
+                                 StudentCauseRepository studentCauses, DropoutCauseRepository causes, Clock clock,
+                                 co.edu.retencion.records.domain.AttendanceRecordRepository attendance) {
+        this.attendance = attendance;
         this.students = students;
         this.academic = academic;
         this.counters = counters;
@@ -136,6 +139,50 @@ public class StudentRecordsService implements StudentRecords {
     public List<String> recentObservationTexts(UUID studentId, int limit) {
         return observations.findByStudentIdOrderByCreatedAtDesc(studentId).stream()
                 .limit(Math.max(0, Math.min(limit, 20))).map(Observation::getText).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<WeeklyAbsences> weeklyAbsences(UUID studentId, java.util.Set<UUID> groupIds) {
+        Map<UUID, Map<LocalDate, Integer>> byGroup = new HashMap<>();
+        for (var record : attendance.findByStudentIdOrderByRecordedAtDesc(studentId)) {
+            if (!groupIds.contains(record.getGroupId())
+                    || record.getStatus() != co.edu.retencion.records.AttendanceStatus.FALTA
+                    || record.getJustification() == co.edu.retencion.records.JustificationState.APROBADA) {
+                continue;
+            }
+            academic.findSession(record.getSessionId()).ifPresent(session -> {
+                LocalDate monday = session.date().with(java.time.DayOfWeek.MONDAY);
+                byGroup.computeIfAbsent(record.getGroupId(), k -> new java.util.TreeMap<>()).merge(monday, 1, Integer::sum);
+            });
+        }
+        List<WeeklyAbsences> out = new ArrayList<>();
+        byGroup.forEach((group, weeks) -> weeks.forEach((week, n) -> out.add(new WeeklyAbsences(group, week, n))));
+        out.sort(Comparator.comparing(WeeklyAbsences::weekStart).thenComparing(w -> w.groupId().toString()));
+        return out;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GradePoint> grades(UUID studentId, java.util.Set<UUID> groupIds) {
+        return grades.findByStudentIdOrderByAssessedOnAsc(studentId).stream()
+                .filter(g -> groupIds.contains(g.getGroupId()))
+                .map(g -> new GradePoint(g.getGroupId(), g.getValue(), g.getAssessedOn())).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isActiveCause(String code) {
+        return code != null && causes.findById(code).filter(DropoutCause::isActive).isPresent();
+    }
+
+    @Override
+    @Transactional
+    public void recordExitCause(UUID studentId, String code, UUID actor) {
+        if (studentCauses.findByStudentIdAndCauseCodeAndResolvedAtIsNull(studentId, code).isEmpty()) {
+            studentCauses.save(StudentCause.open(studentId, code, StudentCause.Source.ENTREVISTA, null, actor,
+                    clock.instant()));
+        }
     }
 
     /** Periodo más reciente no cerrado con inscripciones activas; si no hay, el más reciente. */

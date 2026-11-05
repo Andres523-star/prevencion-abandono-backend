@@ -61,6 +61,15 @@ public interface StudentRegistry {
     Optional<String> givenName(UUID studentId);
 
     /**
+     * Nombre completo del estudiante (campanita del docente, vista del chat). Dato personal: el
+     * llamador verifica el alcance, audita la lectura y nunca lo envía a la IA ni a los logs.
+     */
+    Optional<String> displayName(UUID studentId);
+
+    /** Cambia el estado académico (cierre de un caso de retención). El llamador audita la operación. */
+    void changeStatus(UUID studentId, StudentStatus status);
+
+    /**
      * Correo del estudiante para los avisos de faltas (único uso de correo de la plataforma). Lo usa
      * solo el módulo de correo; nunca debe registrarse en logs.
      */

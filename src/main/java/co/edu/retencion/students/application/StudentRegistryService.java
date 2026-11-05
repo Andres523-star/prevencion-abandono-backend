@@ -33,12 +33,14 @@ public class StudentRegistryService implements StudentRegistry {
     private final EnrollmentService enrollments;
     private final EnrollmentRepository enrollmentRepository;
     private final SocioeconomicProfileRepository socioeconomic;
+    private final java.time.Clock clock;
 
     public StudentRegistryService(StudentRepository students, StudentIdentityRepository identities,
                                   StudentWriter writer, EnrollmentService enrollments,
                                   EnrollmentRepository enrollmentRepository,
-                                  SocioeconomicProfileRepository socioeconomic) {
+                                  SocioeconomicProfileRepository socioeconomic, java.time.Clock clock) {
         this.socioeconomic = socioeconomic;
+        this.clock = clock;
         this.students = students;
         this.identities = identities;
         this.writer = writer;
@@ -135,6 +137,22 @@ public class StudentRegistryService implements StudentRegistry {
     public Optional<String> givenName(UUID studentId) {
         return identities.findById(studentId).map(StudentIdentity::getFullName)
                 .map(String::trim).filter(n -> !n.isEmpty()).map(n -> n.split("\\s+")[0]);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<String> displayName(UUID studentId) {
+        return identities.findById(studentId).map(StudentIdentity::getFullName).map(String::trim);
+    }
+
+    @Override
+    @Transactional
+    public void changeStatus(UUID studentId, co.edu.retencion.students.StudentStatus status) {
+        Student student = students.findById(studentId)
+                .orElseThrow(() -> co.edu.retencion.common.error.DomainException.notFound("Estudiante no encontrado"));
+        student.updateAcademic(student.getProgramId(), student.getCurrentSemester(), status, student.getAdmissionDate(),
+                clock.instant());
+        students.saveAndFlush(student);
     }
 
     static EnrollmentInfo info(Enrollment e) {

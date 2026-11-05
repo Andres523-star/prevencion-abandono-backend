@@ -23,4 +23,26 @@ public interface StudentRecords {
      * registrarse en logs.
      */
     List<String> recentObservationTexts(UUID studentId, int limit);
+
+    /** Faltas que cuentan por semana (lunes) en los grupos indicados (gráfica de la vista del chat). */
+    List<WeeklyAbsences> weeklyAbsences(UUID studentId, java.util.Set<UUID> groupIds);
+
+    /** Notas registradas en los grupos indicados, en orden cronológico. */
+    List<GradePoint> grades(UUID studentId, java.util.Set<UUID> groupIds);
+
+    /**
+     * @param groupId   grupo
+     * @param weekStart lunes de la semana
+     * @param absences  faltas (incluye pendientes de revisión)
+     */
+    record WeeklyAbsences(UUID groupId, java.time.LocalDate weekStart, int absences) {
+    }
+
+    /**
+     * @param groupId    grupo
+     * @param value      nota
+     * @param assessedOn fecha
+     */
+    record GradePoint(UUID groupId, java.math.BigDecimal value, java.time.LocalDate assessedOn) {
+    }
 }
