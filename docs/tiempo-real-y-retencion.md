@@ -29,7 +29,8 @@ eventos del mismo estudiante pueden procesarse a la vez, por eso:
   autorreporte o consejero).
 
 Si un listener falla, la publicación queda pendiente en `event_publication` (Modulith la registra en
-INFO). Las pruebas esperan los listeners con `CampusIntegrationTest.awaitListeners()`.
+INFO). En las pruebas, `EventListenerAwaiter` espera a los listeners antes y después de cada petición
+de MockMvc y al inicio de cada prueba (todas las fases).
 
 ## Tiempo real (`realtime`)
 
