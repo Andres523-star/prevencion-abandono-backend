@@ -122,6 +122,13 @@ Capas por módulo: `api` → `application` → `domain` ← `infrastructure`. L�
 
 Errores siempre en `application/problem+json` con campo `code` estable.
 
+## Rendimiento
+
+Con 50.000 estudiantes y 7,5 millones de filas de asistencia, los gráficos y el tablero responden con **p95 de 17 ms**
+bajo carga de Gatling (12.000 peticiones, 100 por segundo, sin errores; objetivo: 500 ms). Sin caché, la consulta más
+lenta tiene p95 de 62 ms. Medido en un portátil con PostgreSQL embebido; método, cifras y límites en
+[docs/rendimiento.md](docs/rendimiento.md).
+
 ## Documentación
 
 - [Patrones de diseño aplicados](docs/patrones-de-diseno.md) (5 creacionales + Proxy, Decorator, Adapter)
