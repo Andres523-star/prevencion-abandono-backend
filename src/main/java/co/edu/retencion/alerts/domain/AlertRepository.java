@@ -23,6 +23,12 @@ public interface AlertRepository extends JpaRepository<Alert, UUID> {
     List<Alert> findByStudentIdOrderByIdDesc(UUID studentId);
 
     @Query("""
+            select count(a) from Alert a where a.status in ('NUEVA', 'VISTA')
+              and (:anyProgram = true or a.programId in :programs)
+            """)
+    long countOpen(boolean anyProgram, Collection<UUID> programs);
+
+    @Query("""
             select a from Alert a
             where (:mine = false or a.assignedTo = :user)
               and (:anyProgram = true or a.programId in :programs)

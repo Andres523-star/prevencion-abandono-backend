@@ -43,7 +43,7 @@ import co.edu.retencion.users.UserDirectory;
  * real no incluye el nombre del estudiante: el cliente lo obtiene al listar (lectura auditada).
  */
 @Service
-public class NotificationService {
+public class NotificationService implements co.edu.retencion.notifications.NotificationFeed {
 
     private final NotificationRepository notifications;
     private final RealtimePublisher realtime;
@@ -138,6 +138,15 @@ public class NotificationService {
         List<NotificationView> rows = notifications.page(user.userId(), clock.instant(), after == null, after,
                 Limit.of(limit + 1)).stream().map(n -> view(n, user, link)).toList();
         return CursorPage.of(rows, limit, NotificationView::id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FeedItem> latest(UUID userId, int limit) {
+        return notifications.page(userId, clock.instant(), true, null, Limit.of(limit)).stream()
+                .map(n -> new FeedItem(n.getId(), n.getType().name(), n.getStudentId(), n.getRiskLevel(),
+                        ReasonText.of(n.getType(), read(n.getReason())), n.getReadAt() != null, n.getCreatedAt()))
+                .toList();
     }
 
     @Transactional(readOnly = true)

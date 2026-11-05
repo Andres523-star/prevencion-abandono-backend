@@ -55,7 +55,7 @@ import co.edu.retencion.users.UserDirectory;
  * </ul>
  */
 @Service
-public class AlertService {
+public class AlertService implements co.edu.retencion.alerts.AlertQueries {
 
     static final Set<Alert.Status> OPEN = EnumSet.of(Alert.Status.NUEVA, Alert.Status.VISTA);
 
@@ -81,6 +81,12 @@ public class AlertService {
         this.events = events;
         this.mapper = mapper;
         this.clock = clock;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public long openCount(java.util.Set<UUID> programIds) {
+        return alerts.countOpen(programIds == null, programIds == null ? java.util.Set.of(new UUID(0, 0)) : programIds);
     }
 
     /** Vista de una alerta para el personal (factores filtrados por rol). */
