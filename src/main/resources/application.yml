@@ -260,6 +260,17 @@ app:
     max-evidence-size: ${APP_EVIDENCE_MAX_SIZE:5MB}
     max-evidences-per-request: 5
     download-url-ttl: 5m
+  realtime:
+    # simple (una instancia: dev/pruebas/Render) o relay (RabbitMQ con plugin rabbitmq_stomp, varias instancias)
+    broker: ${APP_REALTIME_BROKER:simple}
+    relay-host: ${APP_REALTIME_RELAY_HOST:localhost}
+    relay-port: ${APP_REALTIME_RELAY_PORT:61613}
+    relay-login: ${APP_REALTIME_RELAY_LOGIN:guest}
+    relay-passcode: ${APP_REALTIME_RELAY_PASSCODE:guest}
+    message-size-limit: 64KB
+    heartbeat: 10s
+    send-capacity: ${APP_REALTIME_SEND_PER_MINUTE:60}
+    send-period: 1m
   risk:
     # Procesa la cola del motor (reanálisis por eventos y planes de apoyo).
     worker-enabled: ${APP_RISK_WORKER_ENABLED:true}
