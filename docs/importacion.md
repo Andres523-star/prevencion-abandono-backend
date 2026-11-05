@@ -5,7 +5,7 @@
 | Parámetro | Obligatorio | Descripción |
 |---|---|---|
 | `file` | sí | CSV en UTF-8 (separador `,` o `;`, se detecta solo) o Excel `.xlsx` (primera hoja). Máx. 20 MB / 200.000 filas. |
-| `type` | sí | `TEACHERS`, `SUBJECTS`, `GROUPS`, `STUDENTS`, `ENROLLMENTS` o `GRADES` |
+| `type` | sí | `TEACHERS`, `SUBJECTS`, `GROUPS`, `STUDENTS`, `ENROLLMENTS`, `GRADES` o `DROPOUT_HISTORY` |
 | `dryRun` | no | `true` = solo valida (no escribe nada) |
 | `mapping` | no | JSON `{"campo": "Encabezado del archivo"}` para archivos con otros nombres de columna |
 
@@ -113,6 +113,23 @@ Respeta el cupo del grupo. Una inscripción retirada se reactiva.
 El estudiante debe estar inscrito en el grupo. Reimportar el archivo no duplica notas: si cambia
 el valor de una nota con la misma clave, se actualiza. La plataforma no calcula la nota final
 oficial; solo usa estas notas para los indicadores de riesgo.
+
+### DROPOUT_HISTORY — clave: `programa` + `anio` + `mes` + `semestre`
+
+Series históricas de deserción de periodos anteriores a la plataforma, ya agregadas (sin datos de
+estudiantes). Alimentan la tendencia de `/analytics/trend`; ver [analitica-y-reportes.md](analitica-y-reportes.md).
+
+| Campo | Ejemplo |
+|---|---|
+| `programa`* (codigo_programa) | MED |
+| `anio`* (año, year) | 2023 |
+| `mes` (month) | 2 (si falta, enero) |
+| `semestre` | 3 (déjelo vacío si la serie no distingue semestre) |
+| `matriculados`* (inscritos, enrolled) | 420 |
+| `desertores`* (retirados, dropouts) | 37 (no puede superar a matriculados) |
+| `periodo` (etiqueta) | 2023-1 |
+
+Use una sola forma por programa y mes: por semestre o sin semestre. Si mezcla las dos, se suman.
 
 ## Adaptar el formato de los datos reales
 

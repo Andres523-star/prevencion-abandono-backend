@@ -12,9 +12,11 @@ Requisito del proyecto: aplicar los **5 patrones creacionales** y, de los estruc
 | **Factory Method** | `mailing.infrastructure.MailInfrastructureConfig.emailSender` | Construye el `EmailSender` según `app.mail.provider` (Graph, Resend, log, memoria) y valida su configuración al arrancar. |
 | **Factory Method** | `common.files.FilesConfig` | Elige el almacenamiento (`local` o `s3`) y el antivirus (`clamav` o `signature`) por configuración. |
 | **Factory Method** | `imports.infrastructure.TableReader.forFormat` | Decide qué lector construir (CSV o Excel) según el formato detectado por *magic bytes*. |
-| **Abstract Factory** | `common.state.DistributedStateFactory` (`InMemoryStateFactory`, `RedisStateFactory`) | Crea una *familia* coherente de componentes de estado compartido (rate limiter + almacén de tickets de un solo uso y anti-replay): todos en memoria (dev/test) o todos en Redis (producción con varias instancias). |
+| **Abstract Factory** | `common.state.DistributedStateFactory` (`InMemoryStateFactory`, `RedisStateFactory`) | Crea una *familia* coherente de componentes de estado compartido (rate limiter, almacén de tickets de un solo uso y anti-replay, y caché): todos en memoria (dev/test) o todos en Redis (producción con varias instancias). |
+| **Factory Method** | `reports.infrastructure.ReportWriterFactory`, `reports.application.ReportContentFactory` | Eligen el escritor según el formato (PDF o Excel) y el contenido según el tipo de reporte. |
 | **Factory Method** | `risk.application.ScorerFactory` | Decide en cada análisis qué `RiskScorer` construir: `MlScorer` si `risk.ml.active-version` apunta a un modelo APROBADO y cargable, `RulesScorer` en cualquier otro caso. Activar o volver atrás un modelo es cambiar un parámetro. |
 | **Builder** | `ai.domain.AiPayload.Builder` | Compone el payload hacia la IA por partes opcionales (señales sensibles, texto libre redactado, plan, historial, recursos) en orden canónico; `build()` valida contra la lista blanca, así no existe un payload sin validar. |
+| **Builder** | `reports.domain.ReportDocument.Builder` | Arma un reporte por partes (título, aviso, marca de agua, secciones); `build()` exige el aviso de confidencialidad, así no existe un reporte sin él. |
 | **Builder** | `audit.domain.AuditEntry.Builder` | Una entrada de auditoría tiene muchos campos opcionales (actor, IP, motivo, entidad); el builder evita constructores con una docena de parámetros y valida los obligatorios. |
 | **Prototype** | `common.error.ApiProblem` + `common.error.ProblemCatalog` | El catálogo guarda una plantilla de error por código (tipo, título, estado HTTP); cada error clona la plantilla (`copy()`) y solo personaliza el detalle. Los módulos aportan sus prototipos con `ProblemCatalogContributor`. |
 
@@ -39,6 +41,7 @@ Requisito del proyecto: aplicar los **5 patrones creacionales** y, de los estruc
 | **Adapter** | `ai.infrastructure.AnthropicLlmGateway` | Adapta el SDK oficial de Anthropic al puerto `LlmGateway` y traduce sus excepciones (429, 5xx, red, timeout) a un motivo normalizado (`AiFailure`). |
 | **Adapter** | `risk.infrastructure.OnnxModelRuntime` | Adapta ONNX Runtime al puerto `MlModelRuntime` y al `ProbabilityModel` del dominio (tensor `[N,2]`, `[N,1]` o ZipMap). |
 | **Decorator** | `ai.infrastructure.BudgetedLlmGateway`, `ResilientLlmGateway` | Se apilan sobre el adaptador de Claude: `presupuesto diario de tokens → bulkhead + rate limiter + circuit breaker → SDK`. |
+| **Adapter** | `reports.infrastructure.XlsxReportWriter`, `PdfReportWriter` | Adaptan Apache POI (SXSSF) y OpenPDF al puerto `ReportWriter`. |
 | **Adapter** | `realtime.infrastructure.StompRealtimePublisher` | Adapta `SimpMessagingTemplate` (broker simple o relay sobre RabbitMQ) al puerto `RealtimePublisher`; alertas, campanita y chat no conocen STOMP. |
 | **Decorator** | `realtime.infrastructure.RealtimeSessions` | Envuelve el manejador WebSocket de Spring (`WebSocketHandlerDecoratorFactory`) para registrar cada conexión y poder cerrarla al vencer el token o al revocar la sesión, sin tocar el manejador original. |
 
@@ -64,4 +67,5 @@ Requisito del proyecto: aplicar los **5 patrones creacionales** y, de los estruc
 - `RiskDomainTest`: Strategy de reglas, Prototype de planes y scorers.
 - `OnnxModelRuntimeTest`: Adapter de ONNX Runtime con un modelo real construido en la prueba.
 - `RiskEngineIT` y `MlModelIT`: Adapter + Decorators de Claude (WireMock) y Factory Method del scorer.
+- `ReportWritersTest`: Factory Method y Adapters de reportes; `ReportDomainTest`: Builder del reporte.
 - `RealtimeIT`: Adapter del publicador STOMP y Decorator de sesiones (cierre por vencimiento y logout) con un cliente STOMP real.

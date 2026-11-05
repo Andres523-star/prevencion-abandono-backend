@@ -48,6 +48,9 @@ Pruebas completas (unitarias + integración + arquitectura + cobertura):
 | `chat` | Chat docente-estudiante cifrado con adjuntos escaneados (PDF, .docx, audio) y vista dividida | `ChatMessageSent` |
 | `interventions` | Intervenciones con notas por rol, conversión del plan de apoyo y medición antes/después | `InterventionAssigned` |
 | `retention` | Casos de retención por etapas, seguimiento 7/15/30, cierre con causa, embudo y campaña de reingreso | `RetentionFollowUpDue` |
+| `analytics` | Indicadores agregados sobre vistas materializadas, supresión de celdas, caché en Redis y series históricas | `AnalyticsQueries`, `AnalyticsFilter`, `AnalyticsViewer`, `DropoutHistoryBook` |
+| `dashboard` | Pantalla inicial según el rol: totales, listas ALTO/MEDIO/BAJO y últimas notificaciones | solo REST |
+| `reports` | Reportes asíncronos en PDF y Excel (streaming) con aviso de confidencialidad y auditoría | solo REST |
 
 Capas por módulo: `api` → `application` → `domain` ← `infrastructure`. Límites verificados por
 `ModularityTest` (Modulith) y `ArchitectureRulesTest` (ArchUnit).
@@ -112,6 +115,10 @@ Capas por módulo: `api` → `application` → `domain` ← `infrastructure`. L�
 | `POST /api/v1/retention-cases`, `/retention-cases/{id}/{advance,contacts,tasks,close}` | personal según alcance | Casos de retención |
 | `POST /api/v1/students/me/retention-requests` | ESTUDIANTE | "Necesito ayuda / estoy pensando en retirarme" |
 | `GET /api/v1/retention/funnel`, `GET/POST /retention/campaigns` | personal / ADMIN, COORDINADOR | Embudo y campaña de reingreso (requiere aprobación) |
+| `GET /api/v1/analytics/{dropout-by-program,trend,by-semester,risk-distribution,attendance-risk,retention-funnel}` | ADMIN, CONSEJERO, PSICOLOGO, COORDINADOR (su programa) | Gráficos con filtros comunes; agregados con supresión de celdas |
+| `POST /api/v1/analytics/refresh` | ADMIN | Refresca las vistas de analítica |
+| `GET /api/v1/dashboard/summary`, `/dashboard/students` | personal y DOCENTE, según su alcance | Tablero y listas por nivel (keyset) |
+| `POST /api/v1/reports`, `GET /reports`, `/reports/{id}`, `/reports/{id}/download-url` | ADMIN, CONSEJERO, PSICOLOGO, COORDINADOR (identidad con `X-Access-Reason`) | Reportes asíncronos y URL prefirmada |
 
 Errores siempre en `application/problem+json` con campo `code` estable.
 
@@ -123,7 +130,8 @@ Errores siempre en `application/problem+json` con campo `code` estable.
 - [Cuenta de emergencia (break-glass)](docs/break-glass.md)
 - [Importación masiva y datos sintéticos](docs/importacion.md)
 - [Asistencia, justificaciones y correo de avisos](docs/asistencia-y-correo.md)
-- [Rendimiento (asistencia a 5 millones de filas)](docs/rendimiento.md)
+- [Rendimiento (asistencia, analítica y pruebas de carga con Gatling)](docs/rendimiento.md)
 - [Motor de riesgo e IA](docs/motor-de-riesgo.md) y [modelo predictivo propio](docs/modelo-predictivo.md) (`ml/train.py`)
 - [Tiempo real, alertas, campanita, chat, intervenciones y retención](docs/tiempo-real-y-retencion.md)
+- [Analítica, tablero y reportes](docs/analitica-y-reportes.md)
 - Diagramas de módulos (PlantUML): `target/spring-modulith-docs/` tras `./mvnw verify`
