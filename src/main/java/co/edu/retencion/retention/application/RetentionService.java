@@ -185,7 +185,9 @@ public class RetentionService {
                 .min(Comparator.<UUID>comparingLong(u -> cases.countByAssignedCounselorIdAndStageNot(u,
                         RetentionCase.Stage.CERRADO)).thenComparing(UUID::toString)).orElse(null);
         UUID term = records.snapshot(s.id(), null).termId();
-        return cases.save(RetentionCase.open(s.id(), s.programId(), term, origin, assigned, openedBy, now));
+        RetentionCase opened = cases.save(RetentionCase.open(s.id(), s.programId(), term, origin, assigned, openedBy, now));
+        events.publishEvent(new co.edu.retencion.retention.RetentionCaseChanged(opened.getId(), opened.getStudentId()));
+        return opened;
     }
 
     // ------------------------------------------------------------------ gestión
@@ -214,6 +216,7 @@ public class RetentionService {
                 followUps.save(FollowUp.schedule(caseId, FollowUp.Kind.SEGUIMIENTO, days, today.plusDays(days)));
             }
         }
+        events.publishEvent(new co.edu.retencion.retention.RetentionCaseChanged(caseId, c.getStudentId()));
         return view(cases.save(c), CurrentUser.require());
     }
 
@@ -301,6 +304,7 @@ public class RetentionService {
                 // El estudiante sigue ACTIVO.
             }
         }
+        events.publishEvent(new co.edu.retencion.retention.RetentionCaseChanged(caseId, c.getStudentId()));
         return view(cases.save(c), user);
     }
 
