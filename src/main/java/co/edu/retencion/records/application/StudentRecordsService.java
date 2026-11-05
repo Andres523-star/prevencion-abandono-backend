@@ -185,6 +185,15 @@ public class StudentRecordsService implements StudentRecords, co.edu.retencion.r
         }
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<NearLimitRow> nearLimit(UUID termId, UUID after, int limit) {
+        return counters.nearLimit(termId == null, termId, after == null, after,
+                        org.springframework.data.domain.Limit.of(limit)).stream()
+                .map(c -> new NearLimitRow(c.getEnrollmentId(), c.getStudentId(), c.getGroupId(), c.getCountedAbsences(),
+                        c.getMaxAbsences(), c.getLevel())).toList();
+    }
+
     /** Periodo más reciente no cerrado con inscripciones activas; si no hay, el más reciente. */
     private Optional<TermInfo> currentTerm(List<EnrollmentInfo> enrollments) {
         List<TermInfo> terms = enrollments.stream().map(EnrollmentInfo::termId).distinct()

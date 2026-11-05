@@ -31,6 +31,14 @@ public interface StudentRecords {
     List<GradePoint> grades(UUID studentId, java.util.Set<UUID> groupIds);
 
     /**
+     * Inscripciones con algún nivel de faltas (aviso, crítico o pérdida), por keyset.
+     *
+     * @param termId {@code null} = todos los periodos
+     * @param after  cursor (id de la última inscripción de la página anterior)
+     */
+    List<NearLimitRow> nearLimit(UUID termId, UUID after, int limit);
+
+    /**
      * @param groupId   grupo
      * @param weekStart lunes de la semana
      * @param absences  faltas (incluye pendientes de revisión)
@@ -43,6 +51,10 @@ public interface StudentRecords {
      * @param value      nota
      * @param assessedOn fecha
      */
+    record NearLimitRow(UUID enrollmentId, UUID studentId, UUID groupId, int countedAbsences, int maxAbsences,
+                        AttendanceLevel level) {
+    }
+
     record GradePoint(UUID groupId, java.math.BigDecimal value, java.time.LocalDate assessedOn) {
     }
 }

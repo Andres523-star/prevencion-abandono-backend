@@ -16,6 +16,15 @@ public interface StudentRegistry {
 
     Optional<StudentInfo> findById(UUID studentId);
 
+    /** Varios a la vez (listados y reportes). */
+    java.util.Map<UUID, StudentInfo> findByIds(java.util.Collection<UUID> studentIds);
+
+    /**
+     * Nombres de varios estudiantes, para un reporte identificable. Quien llama audita la operación una
+     * sola vez: una fila de auditoría por estudiante serializaría la cadena durante todo el reporte.
+     */
+    java.util.Map<UUID, String> displayNames(java.util.Collection<UUID> studentIds);
+
     Optional<UUID> findIdByDocument(String documentNumber);
 
     /** Crea o actualiza el estudiante con su identidad y perfil socioeconómico. */

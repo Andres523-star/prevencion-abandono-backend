@@ -56,6 +56,20 @@ public class StudentRegistryService implements StudentRegistry {
 
     @Override
     @Transactional(readOnly = true)
+    public java.util.Map<UUID, StudentInfo> findByIds(java.util.Collection<UUID> studentIds) {
+        return students.findAllById(studentIds).stream().map(StudentRegistryService::info)
+                .collect(java.util.stream.Collectors.toMap(StudentInfo::id, java.util.function.Function.identity()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Map<UUID, String> displayNames(java.util.Collection<UUID> studentIds) {
+        return identities.findAllById(studentIds).stream().collect(java.util.stream.Collectors.toMap(
+                StudentIdentity::getStudentId, i -> i.getFullName().trim()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<UUID> findIdByDocument(String documentNumber) {
         return identities.findByDocumentBlindIndex(writer.documentIndex(documentNumber))
                 .map(StudentIdentity::getStudentId);

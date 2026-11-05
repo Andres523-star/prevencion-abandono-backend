@@ -24,4 +24,14 @@ public interface AbsenceCounterRepository extends JpaRepository<AbsenceCounter, 
     List<AbsenceCounter> findByStudentIdAndTermId(UUID studentId, UUID termId);
 
     List<AbsenceCounter> findByStudentId(UUID studentId);
+
+    @Query("""
+            select c from AbsenceCounter c
+            where c.level <> co.edu.retencion.records.AttendanceLevel.NINGUNO
+              and (:anyTerm = true or c.termId = :term)
+              and (:fromStart = true or c.enrollmentId > :after)
+            order by c.enrollmentId
+            """)
+    List<AbsenceCounter> nearLimit(boolean anyTerm, UUID term, boolean fromStart, UUID after,
+                                   org.springframework.data.domain.Limit limit);
 }
