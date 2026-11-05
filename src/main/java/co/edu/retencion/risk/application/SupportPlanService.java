@@ -51,7 +51,7 @@ import co.edu.retencion.students.TransportMode;
  * solo al leer el plan un rol autorizado (lectura auditada); la IA nunca lo recibe.
  */
 @Service
-public class SupportPlanService {
+public class SupportPlanService implements co.edu.retencion.risk.SupportPlans {
 
     private final RiskFeatureCollector collector;
     private final RiskSettings riskSettings;
@@ -176,6 +176,32 @@ public class SupportPlanService {
                     finalCall == null ? null : finalCall.promptVersion(),
                     finalCall == null ? null : finalCall.payloadHash(), finalFallback, clock.instant())));
         });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<PlanSummary> find(UUID planId) {
+        return plans.findById(planId).map(this::summary);
+    }
+
+    @Override
+    @Transactional
+    public PlanSummary approveWithActions(UUID planId, List<PlanItem> actions, String comment, UUID reviewer) {
+        SupportPlan plan = load(planId, AccessAction.WRITE);
+        if (actions == null || actions.isEmpty()) {
+            throw DomainException.badRequest("El plan aprobado debe tener al menos una acción");
+        }
+        plan.replaceActions(json(actions.stream().map(a -> new PlanAction(a.type(), a.title(), a.description(),
+                a.priority(), a.suggestedOwner(), a.resourceId(), a.dueInDays())).toList()));
+        plan.approve(reviewer, comment, clock.instant());
+        return summary(plans.saveAndFlush(plan));
+    }
+
+    private PlanSummary summary(SupportPlan p) {
+        return new PlanSummary(p.getId(), p.getStudentId(), p.getEnrollmentId(), p.getGroupId(),
+                p.getTriggerLevel().name(), p.getStatus().name(), parse(p.getActions()).stream()
+                .map(a -> new PlanItem(a.type(), a.title(), a.description(), a.priority(), a.suggestedOwner(),
+                        a.resourceId(), a.dueInDays())).toList(), p.getCreatedAt());
     }
 
     @Transactional(readOnly = true)

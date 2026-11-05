@@ -109,6 +109,28 @@ public class RiskAssessmentService implements RiskQueries {
                 .map(a -> new LatestRisk(a.getId(), a.getLevel(), a.getScore(), a.getScoreType(), a.getCreatedAt()));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<LatestRisk> history(UUID studentId, int limit) {
+        return assessments.history(studentId, true, null, Limit.of(Math.max(1, Math.min(limit, 200)))).stream()
+                .map(a -> new LatestRisk(a.getId(), a.getLevel(), a.getScore(), a.getScoreType(), a.getCreatedAt()))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<AssessmentSummary> summary(UUID assessmentId) {
+        return assessments.findById(assessmentId).map(a -> new AssessmentSummary(a.getId(), a.getStudentId(),
+                a.getLevel(), a.getScore(), a.getScoreType(), a.isSensitiveContext(),
+                this.<List<FactorView>>read(a.getFactors(), new TypeReference<>() { }).stream()
+                        .map(f -> new FactorSummary(f.code(), f.category().name(), f.points(), f.explanation(),
+                                f.details())).toList(),
+                this.<List<Map<String, Object>>>read(a.getRecommendations(), new TypeReference<>() { }).stream()
+                        .map(r -> new SuggestedAction((String) r.get("resourceId"), (String) r.get("action"),
+                                (String) r.get("priority"), (String) r.get("responsibleRole"))).toList(),
+                a.getCreatedAt()));
+    }
+
     public AssessmentView view(RiskAssessment a, Set<Role> roles) {
         Set<FactorCategory> visible = FactorVisibility.categoriesFor(roles);
         List<FactorView> factors = this.<List<FactorView>>read(a.getFactors(), new TypeReference<>() { }).stream()

@@ -9,5 +9,7 @@ public enum RiskTrigger {
     /** Umbral de asistencia alcanzado. */
     THRESHOLD,
     /** Lote nocturno. */
-    BATCH
+    BATCH,
+    /** Reanálisis al resolver una intervención (mide su efecto: antes/después). */
+    INTERVENTION
 }

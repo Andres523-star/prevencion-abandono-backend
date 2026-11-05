@@ -135,6 +135,14 @@ public class SupportPlan {
         return p;
     }
 
+    /** El revisor editó las acciones antes de aprobar (solo mientras está PROPUESTO). */
+    public void replaceActions(String actionsJson) {
+        if (status != Status.PROPUESTO) {
+            throw DomainException.conflict("El plan ya fue revisado o reemplazado");
+        }
+        this.actions = actionsJson;
+    }
+
     public void approve(UUID reviewer, String comment, Instant now) {
         review(Status.APROBADO, reviewer, comment, now);
     }
