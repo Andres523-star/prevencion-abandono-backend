@@ -135,3 +135,39 @@ subir el nivel; modelo capaz `claude-opus-5-5` y económico `claude-haiku-5-5`; 
 
 **Revisión humana:** pendiente por el equipo (en especial los prompts, los pesos de las reglas, el
 diccionario de nombres y la revisión jurídica del envío seudonimizado a la API de IA).
+
+### Fase 5 — Alertas, campanita, chat, intervenciones y retención (2026-11-05)
+
+**Generado por IA:**
+- Módulo `realtime`: WebSocket + STOMP con SockJS, autenticación del CONNECT con el JWT de la
+  plataforma, autorización de SUBSCRIBE/SEND (falla cerrado, SPI `SubscriptionAuthorizer`), rate
+  limit por usuario, límites de tamaño, heartbeats, broker simple o relay sobre RabbitMQ y cierre de
+  conexiones al vencer el token o al revocarse la sesión (evento `SessionRevoked`).
+- Módulo `alerts`: alertas por riesgo y umbrales de asistencia con deduplicación, asignación por
+  menor carga (consejero o bienestar) y escalamiento programado.
+- Módulo `notifications`: campanita interna en tiempo real sin nombres guardados, motivo
+  estructurado con texto por plantilla, solo motivos académicos para el docente, acciones "Abrir
+  chat" y "Copiar enlace de cita", deduplicación y expiración.
+- Módulo `chat`: conversación por par docente-estudiante con participantes, mensajes cifrados,
+  adjuntos validados por *magic bytes* (PDF, .docx sin macros, audio) y antivirus antes de guardar,
+  URL prefirmada para participantes, lectura de ADMIN con motivo, solo lectura sin grupo compartido,
+  retención configurable y contexto para la vista dividida.
+- Módulos `interventions` (notas por rol, conversión del plan de apoyo, antes/después del riesgo con
+  reanálisis) y `retention` (etapas con requisitos, seguimiento 7/15/30, cierre con causa y encuesta,
+  embudo y campaña de reingreso con aprobación).
+- Enlace de cita del docente con validación estricta, migración `V5`, APIs públicas nuevas en
+  `users`, `students`, `records`, `justifications` y `risk`, documentación
+  (`docs/tiempo-real-y-retencion.md`) y variables nuevas en `.env.example` y `render.yaml`.
+- Pruebas (143 unitarias/arquitectura + 143 de integración): ciclo completo umbral → alerta → plan →
+  intervención → reanálisis, deduplicación y escalamiento, visibilidad de notas, transiciones de
+  casos, e2e con cliente STOMP real (campanita al docente correcto, chat con texto y adjunto,
+  suscripciones ajenas, CONNECT sin token o vencido, cierre por logout y vencimiento), adjuntos
+  rechazados (.docm, .doc, macros, EICAR, extensión falsa), enlace de cita y texto del chat fuera de
+  la IA.
+
+**Decisiones propuestas por la IA (pendientes de validar):** escalamiento a las 48 h al coordinador;
+deduplicación de la campanita por 72 h; retención del chat de 2 años; apertura automática de casos
+solo con riesgo ALTO; dominios permitidos para el enlace de cita.
+
+**Revisión humana:** pendiente por el equipo (en especial los textos de la campanita, los plazos de
+retención del chat y el flujo de la campaña de reingreso).
