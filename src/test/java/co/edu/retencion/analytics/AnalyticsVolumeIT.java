@@ -110,13 +110,13 @@ class AnalyticsVolumeIT extends RecordsIntegrationTest {
         report.add(String.format("Endpoints con caché (MockMvc): p95 %.1f ms", percentile(http, 0.95)));
         assertThat(percentile(http, 0.95)).isLessThan(LIMIT_MS);
 
-        if (Boolean.getBoolean("retencion.perf.gatling")) {
-            report.add(gatling(admin, d));
-        }
         Path out = Path.of("target", "perf", "analytics-volume.txt");
         Files.createDirectories(out.getParent());
         Files.write(out, report);
         report.forEach(line -> log.info("[volumen] {}", line));
+        if (Boolean.getBoolean("retencion.perf.gatling")) {
+            gatling(admin, d);
+        }
     }
 
     /** Filtros variados: cada medición toca otra combinación de programa, semestre y nivel. */
@@ -176,11 +176,11 @@ class AnalyticsVolumeIT extends RecordsIntegrationTest {
     }
 
     /** Lanza la simulación de {@code perf/} en otra JVM contra este servidor. */
-    private String gatling(Actor admin, Dataset d) throws Exception {
+    private void gatling(Actor admin, Dataset d) throws Exception {
         relogin(admin);
         boolean windows = System.getProperty("os.name").toLowerCase().contains("win");
-        List<String> command = new ArrayList<>(windows ? List.of("cmd", "/c", "mvnw.cmd") : List.of("./mvnw"));
-        command.addAll(List.of("-q", "-f", "perf/pom.xml", "gatling:test", "-DbaseUrl=http://localhost:" + port,
+        List<String> command = new ArrayList<>(windows ? List.of("cmd", "/c", ".\\mvnw.cmd") : List.of("./mvnw"));
+        command.addAll(List.of("-f", "perf/pom.xml", "gatling:test", "-DbaseUrl=http://localhost:" + port,
                 "-DauthToken=" + admin.tokens().accessToken(), "-DtermId=" + d.termId(),
                 "-Dusers=" + Integer.getInteger("retencion.perf.users", 50),
                 "-DdurationSeconds=" + Integer.getInteger("retencion.perf.seconds", 120)));
@@ -188,6 +188,5 @@ class AnalyticsVolumeIT extends RecordsIntegrationTest {
         Process process = new ProcessBuilder(command).redirectErrorStream(true).redirectOutput(output).start();
         assertThat(process.waitFor(15, TimeUnit.MINUTES)).as("Gatling terminó").isTrue();
         assertThat(process.exitValue()).as("Gatling cumple las aserciones; ver target/perf/gatling.log").isZero();
-        return "Gatling: ver target/perf/gatling.log y perf/target/gatling/";
     }
 }
