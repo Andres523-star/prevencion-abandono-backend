@@ -63,3 +63,5 @@ logging:
   level:
     root: WARN
     co.edu.retencion: INFO
+    # Fallos de listeners de eventos (Modulith los registra en INFO y deja la publicación pendiente).
+    org.springframework.modulith.events: INFO
