@@ -33,7 +33,8 @@ public class ImportJob {
         SUBJECTS,
         GROUPS,
         ENROLLMENTS,
-        GRADES
+        GRADES,
+        DROPOUT_HISTORY
     }
 
     /** Formato del archivo. */
