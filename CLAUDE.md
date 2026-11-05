@@ -209,6 +209,29 @@ ADMIN, CONSEJERO (consejero académico), PSICOLOGO (bienestar), COORDINADOR (de 
 - Las notificaciones no tienen preferencia de silencio por usuario ni agrupación (posible mejora de UX).
 - La conversación admite participantes adicionales en el modelo, pero aún no hay API para sumar consejero/psicólogo.
 
+### Estado: Fase 6 completada (2026-11-05) — decisiones tomadas
+- **Verificación:** `./mvnw verify` verde: 159 pruebas unitarias/arquitectura + 161 de integración (2 de Redis se omiten sin Docker). Cobertura de dominio ≥ 80%. Carga a escala completa (50.000 estudiantes, 7.477.085 filas de asistencia): p95 de 17 ms con Gatling (12.000 peticiones, 100/s, 0 fallidas); sin caché, la consulta más lenta tiene p95 de 62 ms. Ver `docs/rendimiento.md` y `docs/analitica-y-reportes.md`.
+- **Módulos nuevos:** `analytics`, `dashboard` y `reports`. Dependencias: analytics → academic, records, justifications, retention, risk, settings; dashboard → analytics, alerts, notifications, risk, students, academic; reports → analytics, risk, students, records, academic, settings; imports → analytics. APIs públicas nuevas: `analytics.AnalyticsQueries/AnalyticsFilter/AnalyticsViewer/DropoutHistoryBook`; `risk.RiskQueries.page/levelCounts`; `students.StudentRegistry.findByIds/displayNames`; `records.StudentRecords.nearLimit`; `alerts.AlertQueries`; `notifications.NotificationFeed`; evento `retention.RetentionCaseChanged`; `common.state.SharedCache`; `ObjectStorage.put(key, Path, mediaType)`.
+- **Migración V6** (`V6__analitica_dashboard_y_reportes.sql`): `dropout_history`, vistas `analytics_student_facts`, `analytics_attendance_cube` y `analytics_retention_cube`, `analytics_refresh_state`, función `analytics_refresh()` (SECURITY DEFINER), `report_jobs`, tipo de importación `DROPOUT_HISTORY` y 5 parámetros en `app_settings`.
+- **Modelo de lectura:** la analítica solo lee vistas materializadas (el cruce entre módulos se hace al refrescar, en la base de datos). Deserción = estado RETIRADO, contada solo en el último periodo del estudiante (`is_dropout`), con fecha del cierre del caso o, si no hay, de la última actualización. Población = estudiantes con alguna inscripción. Semestre y nivel de riesgo son los actuales. `analytics_attendance_cube` parte de `absence_counters`, no de `attendance_records`.
+- **Refresco e invalidación:** los eventos solo marcan `dirty` (el `UPDATE` escribe la primera vez); un job cada 30 s refresca si pasó `analytics.refresh-min-seconds` (300), y a las 02:30 siempre. `REFRESH CONCURRENTLY` con bloqueo consultivo entre instancias. Caché por generación: la clave incluye generación, endpoint y hash de filtros + alcance + mínimo de celda, y guarda la respuesta ya suprimida. Cada respuesta trae `refreshedAt`.
+- **Supresión:** `CellSuppressor` oculta conteos entre 1 y `analytics.min-cell-size` − 1 (10); el cero se muestra. Supresión complementaria en columnas con total conocido. Celda oculta = `null` + `suppressed: true`. El tablero no suprime porque es para personal con acceso a esos estudiantes.
+- **Alcance:** `AnalyticsViewer.of(user)`: ADMIN todo; PSICOLOGO sin programas transversal; demás, sus programas (sin programas, 403). DOCENTE y ESTUDIANTE no acceden a analítica. El alcance va explícito en la API porque los reportes se generan sin petición.
+- **Series históricas:** se cortan antes del primer periodo en vivo; con `riskLevel` o `termId` no aparecen; cada punto trae `source` (LIVE, HISTORICAL, MIXED).
+- **Tablero:** `/dashboard/summary` y `/dashboard/students` (keyset). Personal: totales del modelo de lectura. Docente: en vivo, solo activos de sus grupos, sin alertas ni % de abandono. Listas sin nombre ni factores, lecturas auditadas. ESTUDIANTE 403 (Fase 7).
+- **Reportes:** `report_jobs` con `FOR UPDATE SKIP LOCKED`, lease de 15 min y 3 intentos; el alcance y los filtros se guardan al pedir. Tipos GENERAL, BY_PROGRAM, BY_SEMESTER, BY_YEAR, AT_RISK_STUDENTS y ATTENDANCE. `includeIdentity` solo en listados y con `X-Access-Reason`; se audita solicitud, generación (una fila por reporte) y descarga. Listados sin factores psicológicos, de salud ni socioeconómicos. Aviso con Ley 1581 en todo reporte; PDF con marca de agua. Excel SXSSF (ventana de 100 filas), PDF con máximo `reports.pdf-max-rows` (20.000) o falla con `report_too_large`. Vencen a las `reports.expiry-hours` (24): el archivo se borra y la descarga responde 410. Un reporte ajeno responde 404.
+- **Pruebas:** `AnalyticsIntegrationTest` genera un periodo de 1.200 estudiantes una sola vez y filtra por él. El Excel de 100.000 filas corre en una JVM aparte con 48 MB de heap. `perf/` es un proyecto Maven aparte (Gatling) para no mezclar sus dependencias con el backend.
+
+### Pendientes / riesgos identificados en la Fase 6
+- Definir con el equipo si un TRANSFERIDO cuenta como deserción (hoy sí: el cierre deja al estudiante en RETIRADO).
+- La analítica puede tener hasta ~5 minutos de atraso, y el refresco tarda ~38 s a escala completa: revisar en PostgreSQL gestionado.
+- `SharedCache` sobre Redis no se probó en local (sin Docker): `RedisStateFactoryIT` corre en CI. La prueba de carga usó la caché en memoria.
+- La prueba de volumen cubre un periodo; con años de historia crecerán las consultas sin filtro de periodo.
+- La supresión protege cada respuesta, no la comparación de muchas consultas con filtros distintos.
+- Semestre y nivel de riesgo son los actuales, también al mirar periodos anteriores: guardar una foto por periodo si se necesita exactitud histórica.
+- Los reportes grandes usan disco temporal del servicio: revisar el espacio en Render.
+- Si el histórico de un mismo mes trae filas por semestre y sin semestre, se suman: la plantilla pide usar una sola forma.
+
 ---
 
 ## FASE 1: Fundaciones y seguridad base

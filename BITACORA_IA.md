@@ -171,3 +171,27 @@ solo con riesgo ALTO; dominios permitidos para el enlace de cita.
 
 **Revisión humana:** pendiente por el equipo (en especial los textos de la campanita, los plazos de
 retención del chat y el flujo de la campaña de reingreso).
+
+### Fase 6 — Analítica, tablero y reportes (2026-11-05)
+
+**Generado por IA:**
+- Módulo `analytics`: vistas materializadas como modelo de lectura, seis endpoints con filtros comunes, supresión de
+  celdas con complemento, alcance por programa, caché por generación (nuevo `SharedCache` en la Abstract Factory, Redis
+  o memoria), refresco agrupado por eventos y series históricas con su importación `DROPOUT_HISTORY`.
+- Módulo `dashboard`: resumen según el rol con listas ALTO/MEDIO/BAJO por keyset, en vivo para el docente.
+- Módulo `reports`: cola asíncrona, PDF con marca de agua (OpenPDF), Excel en streaming (SXSSF), alcance guardado en el
+  trabajo, identidad con motivo y auditoría, URL prefirmada y vencimiento.
+- Migración `V6`, APIs públicas nuevas en `risk`, `students`, `records`, `alerts`, `notifications` y `retention`,
+  subida de archivos sin cargarlos en memoria, proyecto `perf/` con Gatling y documentación
+  (`docs/analitica-y-reportes.md`, `docs/rendimiento.md`).
+- Pruebas (159 unitarias/arquitectura + 161 de integración): cada endpoint contra las tablas base con 1.200 estudiantes
+  sintéticos, supresión, ABAC, caché, históricos, tablero por rol, reportes en ambos formatos, Excel de 100.000 filas en
+  una JVM con 48 MB de heap y carga a escala completa (p95 de 17 ms).
+
+**Decisiones propuestas por la IA (pendientes de validar):** tamaño mínimo de celda 10; definición de deserción (estado
+RETIRADO, que hoy incluye los TRANSFERIDO); refresco como máximo cada 5 minutos; reportes disponibles 24 horas; máximo de
+20.000 filas por PDF; quién puede pedir reportes con identidad.
+
+**Revisión humana:** pendiente por el equipo (en especial la definición de deserción, el texto del aviso de
+confidencialidad y si la supresión de celdas basta para los reportes que salgan de la universidad).
+
