@@ -23,9 +23,12 @@ migración V6 (el cruce se hace una vez, al refrescar):
 
 Decisiones que conviene conocer:
 
-- **Deserción** = estudiante con estado `RETIRADO`. Se cuenta solo en su último periodo (`is_dropout`), para
-  que un retiro no aparezca en todos los periodos que cursó. La fecha es el cierre de su caso de retención y,
-  si no tiene, la última actualización del estudiante.
+- **Deserción** = estudiante con estado `RETIRADO` cuyo último cierre de salida no fue `TRANSFERIDO`. Se cuenta
+  solo en su último periodo (`is_dropout`), para que un retiro no aparezca en todos los periodos que cursó. La
+  fecha es el cierre de su caso de retención y, si no tiene, la última actualización del estudiante.
+- **Transferidos:** siguen en la población del periodo y salen de los estudiantes activos, pero no suman a la
+  deserción; se ven aparte en el embudo. Un retirado sin caso de retención cuenta como deserción: nada indica
+  un traslado.
 - **Población** = estudiantes con alguna inscripción. Quien nunca se inscribió no entra en las vistas.
 - **Semestre** = el actual del estudiante: el histórico no se guarda.
 - **Nivel de riesgo** = el último análisis, o `SIN_ANALISIS`. Es el nivel de hoy, también al mirar periodos

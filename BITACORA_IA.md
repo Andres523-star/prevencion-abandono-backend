@@ -184,14 +184,15 @@ retención del chat y el flujo de la campaña de reingreso).
 - Migración `V6`, APIs públicas nuevas en `risk`, `students`, `records`, `alerts`, `notifications` y `retention`,
   subida de archivos sin cargarlos en memoria, proyecto `perf/` con Gatling y documentación
   (`docs/analitica-y-reportes.md`, `docs/rendimiento.md`).
-- Pruebas (159 unitarias/arquitectura + 161 de integración): cada endpoint contra las tablas base con 1.200 estudiantes
+- Pruebas (159 unitarias/arquitectura + 163 de integración): cada endpoint contra las tablas base con 1.200 estudiantes
   sintéticos, supresión, ABAC, caché, históricos, tablero por rol, reportes en ambos formatos, Excel de 100.000 filas en
   una JVM con 48 MB de heap y carga a escala completa (p95 de 17 ms).
 
-**Decisiones propuestas por la IA (pendientes de validar):** tamaño mínimo de celda 10; definición de deserción (estado
-RETIRADO, que hoy incluye los TRANSFERIDO); refresco como máximo cada 5 minutos; reportes disponibles 24 horas; máximo de
+**Decisión del equipo (2026-11-06):** un estudiante TRANSFERIDO no cuenta como deserción (migración V7).
+
+**Decisiones propuestas por la IA (pendientes de validar):** tamaño mínimo de celda 10; refresco como máximo cada 5 minutos; reportes disponibles 24 horas; máximo de
 20.000 filas por PDF; quién puede pedir reportes con identidad.
 
-**Revisión humana:** pendiente por el equipo (en especial la definición de deserción, el texto del aviso de
+**Revisión humana:** pendiente por el equipo (en especial el texto del aviso de
 confidencialidad y si la supresión de celdas basta para los reportes que salgan de la universidad).
 
