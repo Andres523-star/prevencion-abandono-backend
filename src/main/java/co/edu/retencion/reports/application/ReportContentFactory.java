@@ -113,21 +113,21 @@ class ReportContentFactory {
 
     private void programs(ReportDocument.Builder b, AnalyticsFilter f, AnalyticsViewer v) {
         List<AnalyticsViews.ProgramRow> rows = analytics.dropoutByProgram(f, v).rows();
-        b.section("Por programa", List.of("Programa", "Estudiantes", "Retirados", "% deserción"), sink -> rows.forEach(r ->
+        b.section("Por programa", List.of("Programa", "Estudiantes", "Desertores", "% deserción"), sink -> rows.forEach(r ->
                 sink.accept(row(r.programName(), cell(r.students(), r.suppressed()), cell(r.dropouts(), r.suppressed()),
                         cell(r.dropoutRate(), r.suppressed())))));
     }
 
     private void semesters(ReportDocument.Builder b, AnalyticsFilter f, AnalyticsViewer v) {
         List<AnalyticsViews.SemesterRow> rows = analytics.bySemester(f, v).rows();
-        b.section("Por semestre", List.of("Semestre", "Estudiantes", "Retirados", "En riesgo"), sink -> rows.forEach(r ->
+        b.section("Por semestre", List.of("Semestre", "Estudiantes", "Desertores", "En riesgo"), sink -> rows.forEach(r ->
                 sink.accept(row(r.semester(), cell(r.students(), r.suppressed()), cell(r.dropouts(), r.suppressed()),
                         cell(r.atRisk(), r.suppressed())))));
     }
 
     private void years(ReportDocument.Builder b, AnalyticsFilter f, AnalyticsViewer v) {
         List<AnalyticsViews.TrendPoint> rows = analytics.trend(f, AnalyticsQueries.Granularity.YEAR, v).rows();
-        b.section("Por año", List.of("Año", "Retirados", "Matriculados", "% deserción", "Origen"), sink -> rows.forEach(r ->
+        b.section("Por año", List.of("Año", "Desertores", "Matriculados", "% deserción", "Origen"), sink -> rows.forEach(r ->
                 sink.accept(row(r.period(), cell(r.dropouts(), r.suppressed()), r.enrolled(),
                         cell(r.dropoutRate(), r.suppressed()), r.source()))));
     }

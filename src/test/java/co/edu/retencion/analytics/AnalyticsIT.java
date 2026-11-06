@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -228,6 +229,43 @@ class AnalyticsIT extends AnalyticsIntegrationTest {
         }
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/analytics/refresh")
                 .header("Authorization", bearer(isw.tokens()))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void transferredStudentsAreNotDropouts() throws Exception {
+        AttendanceWorld transferred = world(ISW);
+        AttendanceWorld withdrawn = world(ISW);
+        Actor counselor = staff(Set.of(Role.CONSEJERO), Set.of(ISW));
+        close(counselor, transferred, Map.of("outcome", "TRANSFERIDO", "causeCode", "TRASLADO_OTRA_INSTITUCION"));
+        close(counselor, withdrawn, Map.of("outcome", "RETIRADO", "causeCode", "OTRA", "exitSurvey", Map.of("volveria", "no")));
+        assertThat(jdbc.queryForObject("SELECT status FROM students WHERE id = ?", String.class, transferred.studentId()))
+                .as("sigue saliendo de la universidad").isEqualTo("RETIRADO");
+        refresh();
+        setting("analytics.min-cell-size", 1);
+        Actor admin = admin();
+
+        JsonNode moved = rows(admin, "dropout-by-program", "termId", worldTerm(transferred)).get("rows").get(0);
+        assertThat(moved.get("students").asLong()).as("sigue en la población del periodo").isEqualTo(1);
+        assertThat(moved.get("dropouts").asLong()).isZero();
+        assertThat(moved.get("dropoutRate").decimalValue().signum()).isZero();
+        assertThat(rows(admin, "trend", "termId", worldTerm(transferred)).get("rows")).isEmpty();
+        assertThat(rows(admin, "by-semester", "termId", worldTerm(transferred)).get("rows").get(0).get("dropouts").asLong()).isZero();
+
+        JsonNode left = rows(admin, "dropout-by-program", "termId", worldTerm(withdrawn)).get("rows").get(0);
+        assertThat(left.get("dropouts").asLong()).isEqualTo(1);
+        assertThat(rows(admin, "trend", "termId", worldTerm(withdrawn)).get("rows").get(0).get("dropouts").asLong()).isEqualTo(1);
+
+        // En el embudo el traslado se sigue viendo, aparte de los retirados.
+        JsonNode funnel = rows(admin, "retention-funnel", "termId", worldTerm(transferred));
+        assertThat(funnel.get("transferred").asLong()).isEqualTo(1);
+        assertThat(funnel.get("withdrawn").asLong()).isZero();
+    }
+
+    private void close(Actor counselor, AttendanceWorld w, Map<String, Object> body) throws Exception {
+        relogin(counselor);
+        String id = read(postJson("/api/v1/retention-cases", counselor.tokens(), Map.of("studentId", w.studentId()))
+                .andExpect(status().isCreated())).get("id").asText();
+        postJson("/api/v1/retention-cases/" + id + "/close", counselor.tokens(), body).andExpect(status().isOk());
     }
 
     @Test
