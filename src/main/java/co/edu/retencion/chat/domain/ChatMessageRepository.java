@@ -26,4 +26,6 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
 
     @Query("select m from ChatMessage m where m.createdAt < :before and m.purgedAt is null")
     List<ChatMessage> findExpired(Instant before, Limit limit);
+
+    List<ChatMessage> findByConversationIdAndPurgedAtIsNull(UUID conversationId);
 }

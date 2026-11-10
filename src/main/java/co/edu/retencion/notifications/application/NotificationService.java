@@ -162,6 +162,12 @@ public class NotificationService implements co.edu.retencion.notifications.Notif
         notifications.save(n);
     }
 
+    /** Supresión de datos del titular: borra sus notificaciones y las que lo mencionan. */
+    @Transactional
+    public int forget(UUID userId, UUID studentId) {
+        return notifications.deleteForSubject(userId == null ? new UUID(0, 0) : userId, studentId);
+    }
+
     @Transactional
     public int markAllRead() {
         return notifications.readAll(CurrentUser.require().userId(), clock.instant());

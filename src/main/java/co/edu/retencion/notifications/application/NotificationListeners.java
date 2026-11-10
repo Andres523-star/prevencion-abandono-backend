@@ -41,9 +41,11 @@ class NotificationListeners {
     private final AcademicDirectory academic;
     private final StudentRegistry students;
     private final RiskQueries risk;
+    private final co.edu.retencion.users.UserDirectory users;
 
     NotificationListeners(NotificationService notifications, StudentRecords records, AcademicDirectory academic,
-                          StudentRegistry students, RiskQueries risk) {
+                          StudentRegistry students, RiskQueries risk, co.edu.retencion.users.UserDirectory users) {
+        this.users = users;
         this.notifications = notifications;
         this.records = records;
         this.academic = academic;
@@ -95,6 +97,31 @@ class NotificationListeners {
     void on(JustificationSubmitted event) {
         notifications.notify(event.teacherUserId(), Notification.Type.JUSTIFICACION_PENDIENTE, event.studentId(), null,
                 Map.of("subject", String.valueOf(subjectName(event.groupId()))), event.justificationId());
+    }
+
+    @ApplicationModuleListener
+    void on(co.edu.retencion.justifications.JustificationAppealed event) {
+        notifications.notify(event.teacherUserId(), Notification.Type.JUSTIFICACION_APELADA, event.studentId(), null,
+                Map.of("subject", String.valueOf(subjectName(event.groupId()))), event.justificationId());
+    }
+
+    @ApplicationModuleListener
+    void on(co.edu.retencion.privacy.DataRequestSubmitted event) {
+        for (UUID admin : users.activeUsersWithRole(co.edu.retencion.common.security.Role.ADMIN, null)) {
+            notifications.notify(admin, Notification.Type.SOLICITUD_DATOS, null, null, Map.of("type", event.type()),
+                    event.requestId());
+        }
+    }
+
+    @ApplicationModuleListener
+    void on(co.edu.retencion.privacy.DataRequestAnswered event) {
+        notifications.notify(event.requesterUserId(), Notification.Type.SOLICITUD_DATOS_RESPONDIDA, null, null,
+                Map.of("status", event.status()), event.requestId());
+    }
+
+    @ApplicationModuleListener
+    void on(co.edu.retencion.privacy.StudentDataSuppressed event) {
+        notifications.forget(event.userId(), event.studentId());
     }
 
     @ApplicationModuleListener

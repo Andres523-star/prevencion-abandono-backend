@@ -36,6 +36,10 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     int readAll(UUID recipient, Instant now);
 
     @Modifying
+    @Query("delete from Notification n where n.recipientId = :user or n.studentId = :student")
+    int deleteForSubject(UUID user, UUID student);
+
+    @Modifying
     @Query("delete from Notification n where n.expiresAt <= :now")
     int purgeExpired(Instant now);
 }
