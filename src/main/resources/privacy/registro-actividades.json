@@ -1,0 +1,68 @@
+{
+  "version": "2026-11-09",
+  "responsable": "Universidad (completar razón social, NIT, dirección y canal de atención de PQR)",
+  "encargados": [
+    {"nombre": "Render Services, Inc.", "rol": "Hosting de aplicación, base de datos y Redis", "ubicacion": "Fuera de Colombia (región del Blueprint)", "datos": "Todos los datos de la plataforma, cifrados en reposo; identidad cifrada por columna"},
+    {"nombre": "Supabase, Inc.", "rol": "Autenticación (correo, MFA)", "ubicacion": "Fuera de Colombia", "datos": "Correo, identificador de cuenta, factores MFA"},
+    {"nombre": "Anthropic, PBC", "rol": "Análisis de riesgo con IA (API de Claude)", "ubicacion": "Fuera de Colombia", "datos": "Solo datos seudonimizados: código anónimo, rangos y métricas; nunca identidad, chat ni evidencias"},
+    {"nombre": "Proveedor de correo (por definir)", "rol": "Avisos de faltas al estudiante", "ubicacion": "Por definir", "datos": "Correo del estudiante, materia, fecha y contador de faltas"},
+    {"nombre": "Almacenamiento de objetos (S3 compatible, por definir)", "rol": "Evidencias, adjuntos del chat, reportes y copias del titular", "ubicacion": "Por definir", "datos": "Archivos con nombre aleatorio, sin enlaces públicos"}
+  ],
+  "actividades": [
+    {
+      "id": "TRATAMIENTO_ACADEMICO",
+      "finalidad": "Gestionar asistencia, notas, justificaciones y avisos de faltas",
+      "titulares": "Estudiantes",
+      "datos": ["identificación", "contacto", "datos académicos", "asistencia", "justificaciones y evidencias"],
+      "datosSensibles": ["evidencias de salud adjuntas a justificaciones (categoría SALUD)"],
+      "baseLegal": "Autorización del titular (Ley 1581 art. 9) y relación académica; evidencias de salud con autorización explícita",
+      "consentimiento": "TRATAMIENTO_ACADEMICO",
+      "retencion": "Registro académico según la normativa institucional; evidencias mientras dure el proceso y su revisión"
+    },
+    {
+      "id": "ANALITICA_RETENCION",
+      "finalidad": "Detectar riesgo de deserción, alertar al personal y proponer apoyo (la IA recomienda, una persona decide)",
+      "titulares": "Estudiantes",
+      "datos": ["datos académicos", "asistencia", "contexto socioeconómico (sin estrato en las reglas)", "historial de riesgo"],
+      "datosSensibles": [],
+      "baseLegal": "Autorización del titular para la finalidad de acompañamiento",
+      "consentimiento": "ANALITICA_RETENCION",
+      "transferenciaInternacional": "Transmisión seudonimizada a Anthropic (API de IA): requiere revisión jurídica",
+      "retencion": "Historial de análisis mientras el estudiante esté activo y el plazo institucional posterior; registro técnico de llamadas a la IA: ai.calls-retention-days"
+    },
+    {
+      "id": "BIENESTAR",
+      "finalidad": "Evaluaciones físicas y psicológicas y remisiones de bienestar",
+      "titulares": "Estudiantes",
+      "datos": ["evaluaciones de bienestar", "remisiones"],
+      "datosSensibles": ["salud física y mental"],
+      "baseLegal": "Autorización explícita del titular (Ley 1581 art. 6) ; acceso solo PSICOLOGO",
+      "consentimiento": "BIENESTAR",
+      "retencion": "Según la normativa de historia clínica aplicable"
+    },
+    {
+      "id": "COMUNICACIONES",
+      "finalidad": "Chat docente-estudiante y campanita interna",
+      "titulares": "Estudiantes y personal",
+      "datos": ["mensajes", "adjuntos", "notificaciones"],
+      "datosSensibles": [],
+      "baseLegal": "Autorización del titular",
+      "consentimiento": "COMUNICACIONES",
+      "retencion": "Chat: chat.retention-days; notificaciones: notifications.expiry-days"
+    },
+    {
+      "id": "GESTION_DE_ACCESO",
+      "finalidad": "Autenticación, autorización y auditoría de la plataforma",
+      "titulares": "Personal y estudiantes",
+      "datos": ["correo", "roles", "dirección IP", "registro de auditoría"],
+      "datosSensibles": [],
+      "baseLegal": "Interés legítimo en la seguridad de la información y obligación de demostrar el cumplimiento",
+      "retencion": "Auditoría: permanente (append-only); sesiones: 24 h"
+    }
+  ],
+  "derechosDelTitular": {
+    "canal": "Portal del estudiante: POST /api/v1/students/me/data-requests",
+    "consulta": "10 días hábiles (privacy.access-response-business-days)",
+    "reclamo": "15 días hábiles (privacy.claim-response-business-days)"
+  }
+}
