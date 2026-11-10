@@ -71,3 +71,8 @@ logging:
     co.edu.retencion: INFO
     # Fallos de listeners de eventos (Modulith los registra en INFO y deja la publicación pendiente).
     org.springframework.modulith.events: INFO
+
+# El recorrido de seguridad (SecurityMatrixIT) lee la especificación OpenAPI.
+springdoc:
+  api-docs:
+    enabled: true
