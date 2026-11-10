@@ -1,0 +1,27 @@
+# Recolector OpenTelemetry: recibe las trazas del backend (OTLP/HTTP) y las envía a Tempo.
+# Activar en el backend: OTEL_TRACING_ENABLED=true y OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+processors:
+  batch: {}
+  attributes/sin-pii:
+    actions:
+      # Defensa en profundidad: ningún atributo de usuario final viaja a las trazas.
+      - key: enduser.id
+        action: delete
+      - key: http.request.header.authorization
+        action: delete
+exporters:
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [attributes/sin-pii, batch]
+      exporters: [otlp/tempo]

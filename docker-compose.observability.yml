@@ -1,0 +1,32 @@
+# Observabilidad local: Prometheus + Grafana (tablero provisionado) + recolector OTel + Tempo.
+#   docker compose -f docker-compose.observability.yml up -d
+# Prometheus lee el token de ADMIN de observability/prometheus/token (no versionado).
+# Asistido por IA (Claude, Anthropic). Ver BITACORA_IA.md.
+services:
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./observability/prometheus/token:/etc/prometheus/token:ro
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    ports: ["9090:9090"]
+  grafana:
+    image: grafana/grafana:11.3.1
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["3000:3000"]
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    command: ["--config=/etc/otel/collector.yml"]
+    volumes:
+      - ./observability/otel/collector.yml:/etc/otel/collector.yml:ro
+    ports: ["4318:4318"]
+  tempo:
+    image: grafana/tempo:2.6.1
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ./observability/otel/tempo.yml:/etc/tempo.yml:ro

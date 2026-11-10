@@ -22,3 +22,4 @@ target/
 # SO
 .DS_Store
 Thumbs.db
+observability/prometheus/token

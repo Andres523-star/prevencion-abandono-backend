@@ -1,0 +1,74 @@
+# Alertas operativas. Umbrales iniciales: ajustar con el tráfico real del piloto.
+groups:
+  - name: retencion-disponibilidad
+    rules:
+      - alert: BackendCaido
+        expr: up{job="retencion-backend"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "El backend no responde a Prometheus"
+          runbook: "docs/runbook-incidentes.md#backend-caido"
+      - alert: ErroresServidorAltos
+        expr: sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum(rate(http_server_requests_seconds_count[5m])) > 0.02
+        for: 10m
+        labels: {severity: critical}
+        annotations:
+          summary: "Más del 2 % de las peticiones terminan en 5xx"
+          runbook: "docs/runbook-incidentes.md#errores-5xx"
+      - alert: LatenciaAlta
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{uri!~"/actuator.*"}[5m]))) > 1
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "p95 de la API por encima de 1 s"
+          runbook: "docs/runbook-incidentes.md#latencia"
+      - alert: PoolDeConexionesSaturado
+        expr: max(hikaricp_connections_pending) > 5
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Peticiones esperando conexión a la base de datos"
+          runbook: "docs/runbook-incidentes.md#pool"
+  - name: retencion-colas
+    rules:
+      - alert: EventosAtascados
+        expr: retencion_events_pending > 500
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "Eventos de dominio sin completar (listener lento o fallando)"
+          runbook: "docs/runbook-incidentes.md#eventos"
+      - alert: CorreosFallando
+        expr: increase(retencion_mail_failed_total[1h]) > 20 or retencion_mail_outbox{status="PENDIENTE"} > 1000
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "El proveedor de correo rechaza o no despacha los avisos de faltas"
+          runbook: "docs/runbook-incidentes.md#correo"
+      - alert: ColaDeRiesgoCreciendo
+        expr: retencion_risk_queue > 2000
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: "El motor de riesgo no alcanza a procesar la cola"
+      - alert: SolicitudesDelTitularVencidas
+        expr: retencion_privacy_requests_overdue > 0
+        for: 1h
+        labels: {severity: critical}
+        annotations:
+          summary: "Hay solicitudes de datos personales vencidas (plazo legal de la Ley 1581)"
+          runbook: "docs/runbook-incidentes.md#solicitudes-titular"
+  - name: retencion-ia
+    rules:
+      - alert: PresupuestoDeTokensCasiAgotado
+        expr: sum(increase(ai_tokens_total[1d])) > 1800000
+        labels: {severity: warning}
+        annotations:
+          summary: "Se consumió el 90 % del presupuesto diario de tokens de IA"
+      - alert: IaFallando
+        expr: sum(rate(ai_calls_total{outcome!="OK"}[15m])) / sum(rate(ai_calls_total[15m])) > 0.3
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "Más del 30 % de las llamadas a la IA fallan (el motor sigue con reglas)"
