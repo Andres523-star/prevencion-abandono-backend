@@ -29,7 +29,7 @@ class ModularityTest {
                 .containsExactlyInAnyOrder("common", "auth", "users", "audit", "settings", "academic", "students", "imports",
                         "records", "justifications", "mailing", "wellbeing", "ai", "risk",
                         "realtime", "alerts", "notifications", "chat", "interventions", "retention",
-                        "analytics", "dashboard", "reports");
+                        "analytics", "dashboard", "reports", "portal", "privacy");
     }
 
     @Test
