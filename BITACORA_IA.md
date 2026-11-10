@@ -196,3 +196,31 @@ retención del chat y el flujo de la campaña de reingreso).
 **Revisión humana:** pendiente por el equipo (en especial el texto del aviso de
 confidencialidad y si la supresión de celdas basta para los reportes que salgan de la universidad).
 
+
+### Fase 7 — Portal del estudiante, cumplimiento, endurecimiento y salida a producción (2026-11-10)
+
+**Generado por IA:**
+- Módulo `portal` (materias, faltas con su política, notas, historial y apoyo aprobado, sin lenguaje de riesgo) y
+  apelación de justificaciones rechazadas (una vez, decide el docente de la materia).
+- Módulo `privacy`: consulta con copia de datos, rectificación y supresión en dos pasos con plazos de la Ley 1581,
+  registro de actividades de tratamiento, purgas por retención en correo e IA, y reacción del chat y la campanita a
+  la supresión.
+- Endurecimiento: recorrido de autorización negativa de todos los endpoints desde OpenAPI (encontró y se cerró un
+  endpoint abierto de más), límite del cuerpo JSON, pruebas de inyección y de no enumeración, maven-enforcer, SBOM
+  CycloneDX escaneado en CI, revisión ASVS L2.
+- Operación: métricas de colas, tablero de Grafana, alertas de Prometheus, recolector OTel, runbook (incluida la
+  brecha de datos personales), backups cifrados con prueba de restauración real (`BackupRestoreIT`), migraciones
+  controladas fuera del arranque (`MigrateMain` en el `preDeployCommand`), CD con aprobación para producción, réplica
+  de lectura opcional para analítica.
+- Prueba de pico de asistencia con Gatling a 50.000 estudiantes: destapó y se corrigieron el agotamiento del pool por
+  listeners sin límite, la carrera al crear la partición del primer día (V9) y consultas de más por lista; quedó con
+  0 fallas y p95 de 110 ms en la franja pico.
+- Documentación final: arquitectura C4, catálogo de eventos, cumplimiento y lista de validación jurídica,
+  dimensionamiento, despliegue, checklist de piloto, guía de datos reales y manual de configuración.
+
+**Decisiones propuestas por la IA (pendientes de validar):** ADMIN atiende las solicitudes del titular hasta que se
+designe un oficial de protección de datos; qué se conserva tras una supresión; plazo de apelación de 5 días; una
+instancia en Render hasta tener RabbitMQ con STOMP; tamaños de pool, hilos de listeners y bulkhead.
+
+**Revisión humana:** pendiente por el equipo (en especial la validación jurídica, los textos del portal para el
+estudiante y la creación de los ambientes en Render).
