@@ -33,12 +33,15 @@ public class StudentRegistryService implements StudentRegistry {
     private final EnrollmentService enrollments;
     private final EnrollmentRepository enrollmentRepository;
     private final SocioeconomicProfileRepository socioeconomic;
+    private final co.edu.retencion.students.domain.DataConsentRepository consents;
     private final java.time.Clock clock;
 
     public StudentRegistryService(StudentRepository students, StudentIdentityRepository identities,
                                   StudentWriter writer, EnrollmentService enrollments,
                                   EnrollmentRepository enrollmentRepository,
-                                  SocioeconomicProfileRepository socioeconomic, java.time.Clock clock) {
+                                  SocioeconomicProfileRepository socioeconomic, java.time.Clock clock,
+                                  co.edu.retencion.students.domain.DataConsentRepository consents) {
+        this.consents = consents;
         this.socioeconomic = socioeconomic;
         this.clock = clock;
         this.students = students;
@@ -52,6 +55,35 @@ public class StudentRegistryService implements StudentRegistry {
     @Transactional(readOnly = true)
     public Optional<StudentInfo> findById(UUID studentId) {
         return students.findById(studentId).map(StudentRegistryService::info);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<IdentityRecord> identityOf(UUID studentId) {
+        return identities.findById(studentId).map(i -> new IdentityRecord(i.getFullName(), i.getDocumentType().name(),
+                i.getDocumentNumber(), i.getEmail(), i.getPhone()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<ConsentRecord> consentsOf(UUID studentId) {
+        return consents.findByStudentIdOrderByRecordedAtDesc(studentId).stream()
+                .map(c -> new ConsentRecord(c.getPurpose().name(), c.isGranted(), c.getPolicyVersion(), c.getChannel().name(),
+                        c.getRecordedAt())).toList();
+    }
+
+    @Override
+    @Transactional
+    public Optional<UUID> suppressPersonalData(UUID studentId) {
+        Student student = students.findById(studentId)
+                .orElseThrow(() -> co.edu.retencion.common.error.DomainException.notFound("Estudiante no encontrado"));
+        UUID user = student.getUserId();
+        identities.findById(studentId).ifPresent(identities::delete);
+        socioeconomic.findById(studentId).ifPresent(socioeconomic::delete);
+        student.unlinkUser(clock.instant());
+        student.softDelete(clock.instant());
+        students.saveAndFlush(student);
+        return Optional.ofNullable(user);
     }
 
     @Override

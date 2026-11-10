@@ -16,6 +16,31 @@ public interface StudentRegistry {
 
     Optional<StudentInfo> findById(UUID studentId);
 
+    /** Identidad descifrada para la copia de datos del titular; quien llama audita. */
+    Optional<IdentityRecord> identityOf(UUID studentId);
+
+    /** Historial de consentimientos (sin datos personales). */
+    java.util.List<ConsentRecord> consentsOf(UUID studentId);
+
+    /**
+     * Supresión de datos personales (proceso formal de la Ley 1581): borra la identidad cifrada y el perfil
+     * socioeconómico, desvincula el usuario y marca al estudiante como borrado. Lo académico queda
+     * seudonimizado por la obligación legal de conservar el registro académico.
+     *
+     * @return el usuario que estaba vinculado, para desactivarlo
+     */
+    Optional<UUID> suppressPersonalData(UUID studentId);
+
+    record IdentityRecord(String fullName, String documentType, String documentNumber, String email, String phone) {
+        @Override
+        public String toString() {
+            return "IdentityRecord[***]";
+        }
+    }
+
+    record ConsentRecord(String purpose, boolean granted, String policyVersion, String channel, java.time.Instant recordedAt) {
+    }
+
     /** Varios a la vez (listados y reportes). */
     java.util.Map<UUID, StudentInfo> findByIds(java.util.Collection<UUID> studentIds);
 

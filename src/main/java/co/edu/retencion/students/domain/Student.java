@@ -111,6 +111,12 @@ public class Student {
         return Objects.equals(userId, user);
     }
 
+    /** Quita el vínculo con el usuario (supresión de datos del titular). */
+    public void unlinkUser(Instant now) {
+        this.userId = null;
+        this.updatedAt = now;
+    }
+
     public void softDelete(Instant now) {
         this.deletedAt = now;
         this.updatedAt = now;
