@@ -28,10 +28,15 @@ import co.edu.retencion.analytics.domain.TrendMerger;
 @Repository
 public class AnalyticsRepository {
 
+    /** Lecturas: réplica si está configurada. */
     private final NamedParameterJdbcTemplate jdbc;
+    /** Escrituras y refresco: siempre la base principal. */
+    private final NamedParameterJdbcTemplate primary;
 
-    public AnalyticsRepository(NamedParameterJdbcTemplate jdbc) {
+    public AnalyticsRepository(@org.springframework.beans.factory.annotation.Qualifier("analyticsRead")
+                               NamedParameterJdbcTemplate jdbc, javax.sql.DataSource primaryDataSource) {
         this.jdbc = jdbc;
+        this.primary = new NamedParameterJdbcTemplate(primaryDataSource);
     }
 
     /** Conteos crudos (antes de suprimir) por programa. */
@@ -269,7 +274,7 @@ public class AnalyticsRepository {
     }
 
     public RefreshState refreshState() {
-        return jdbc.queryForObject("SELECT dirty, refreshed_at FROM analytics_refresh_state", Map.of(),
+        return primary.queryForObject("SELECT dirty, refreshed_at FROM analytics_refresh_state", Map.of(),
                 (rs, i) -> new RefreshState(rs.getBoolean("dirty"), instant(rs)));
     }
 
@@ -279,21 +284,21 @@ public class AnalyticsRepository {
 
     /** Solo escribe la primera vez: los eventos siguientes no compiten por la fila. */
     public void markDirty(Instant now) {
-        jdbc.update("UPDATE analytics_refresh_state SET dirty = true, dirty_since = :now WHERE NOT dirty",
+        primary.update("UPDATE analytics_refresh_state SET dirty = true, dirty_since = :now WHERE NOT dirty",
                 new MapSqlParameterSource("now", java.sql.Timestamp.from(now)));
     }
 
     /** Refresca las vistas si ninguna otra instancia lo está haciendo. Debe correr en una transacción. */
     public boolean refresh(Instant now) {
-        Boolean locked = jdbc.queryForObject("SELECT pg_try_advisory_xact_lock(hashtextextended('analytics-refresh', 0))",
+        Boolean locked = primary.queryForObject("SELECT pg_try_advisory_xact_lock(hashtextextended('analytics-refresh', 0))",
                 Map.of(), Boolean.class);
         if (!Boolean.TRUE.equals(locked)) {
             return false;
         }
         // Se limpia antes de refrescar: un evento que llegue durante el refresco vuelve a marcar.
-        jdbc.update("UPDATE analytics_refresh_state SET dirty = false, dirty_since = NULL, refreshed_at = :now",
+        primary.update("UPDATE analytics_refresh_state SET dirty = false, dirty_since = NULL, refreshed_at = :now",
                 new MapSqlParameterSource("now", java.sql.Timestamp.from(now)));
-        jdbc.query("SELECT analytics_refresh()", Map.of(), (ResultSet rs) -> {
+        primary.query("SELECT analytics_refresh()", Map.of(), (ResultSet rs) -> {
         });
         return true;
     }
