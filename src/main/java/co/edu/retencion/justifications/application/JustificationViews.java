@@ -26,11 +26,13 @@ public final class JustificationViews {
     public record JustificationView(UUID id, UUID attendanceRecordId, UUID studentId, UUID groupId,
                                     AbsenceJustification.Category category, String description,
                                     AbsenceJustification.Status status, LocalDate deadline, Instant submittedAt,
-                                    Instant reviewedAt, String reviewComment, List<EvidenceView> evidences) {
+                                    Instant reviewedAt, String reviewComment, String appealText, Instant appealedAt,
+                                    List<EvidenceView> evidences) {
         static JustificationView of(AbsenceJustification j, List<JustificationEvidence> evidences) {
             return new JustificationView(j.getId(), j.getAttendanceRecordId(), j.getStudentId(), j.getGroupId(),
                     j.getCategory(), j.getDescription(), j.getStatus(), j.getDeadline(), j.getSubmittedAt(),
-                    j.getReviewedAt(), j.getReviewComment(), evidences.stream().map(EvidenceView::of).toList());
+                    j.getReviewedAt(), j.getReviewComment(), j.getAppealText(), j.getAppealedAt(),
+                    evidences.stream().map(EvidenceView::of).toList());
         }
 
         @Override

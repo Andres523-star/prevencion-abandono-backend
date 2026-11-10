@@ -14,4 +14,9 @@ public interface AbsenceJustificationRepository extends JpaRepository<AbsenceJus
     List<AbsenceJustification> findByStudentIdOrderBySubmittedAtDesc(UUID studentId);
 
     List<AbsenceJustification> findByGroupIdAndStatus(UUID groupId, AbsenceJustification.Status status);
+
+    List<AbsenceJustification> findByGroupIdAndStatusIn(UUID groupId, java.util.Collection<AbsenceJustification.Status> statuses);
+
+    List<AbsenceJustification> findByAssignedTeacherIdAndStatusInOrderBySubmittedAtAsc(UUID teacherId,
+            java.util.Collection<AbsenceJustification.Status> statuses);
 }

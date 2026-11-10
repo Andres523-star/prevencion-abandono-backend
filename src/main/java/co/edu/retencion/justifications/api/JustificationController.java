@@ -8,6 +8,7 @@ import java.util.UUID;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -112,6 +113,21 @@ public class JustificationController {
     @Operation(summary = "Aprueba o rechaza (con comentario) la justificación: solo el docente de la materia")
     public DecisionView decide(@PathVariable UUID id, @Valid @RequestBody DecisionRequest request) {
         return justifications.decide(id, request.approved(), request.comment());
+    }
+
+    public record AppealRequest(@NotBlank @Size(max = 2000) String text) {
+        @Override
+        public String toString() {
+            return "AppealRequest[***]";
+        }
+    }
+
+    @PostMapping("/justifications/{id}/appeal")
+    @PreAuthorize("hasRole('ESTUDIANTE')")
+    @Audited(action = "JUSTIFICATION_APPEAL", entity = "AbsenceJustification", entityId = "#id")
+    @Operation(summary = "Apela una justificación rechazada (una vez, dentro del plazo); decide el docente de la materia")
+    public JustificationView appeal(@PathVariable UUID id, @Valid @RequestBody AppealRequest request) {
+        return justifications.appeal(id, request.text());
     }
 
     @GetMapping("/evidences/{id}/download-url")

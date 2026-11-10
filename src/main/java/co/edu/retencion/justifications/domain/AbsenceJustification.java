@@ -45,7 +45,9 @@ public class AbsenceJustification {
         PENDIENTE,
         APROBADA,
         RECHAZADA,
-        VENCIDA
+        VENCIDA,
+        /** Rechazada y apelada por el estudiante: el docente decide otra vez, por última vez. */
+        APELADA
     }
 
     @Id
@@ -100,6 +102,13 @@ public class AbsenceJustification {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "appeal_text_ciphertext")
+    private String appealText;
+
+    @Column(name = "appealed_at")
+    private Instant appealedAt;
+
     @Version
     private long version;
 
@@ -132,7 +141,7 @@ public class AbsenceJustification {
      * @throws DomainException si no está pendiente o falta el comentario de rechazo
      */
     public void decide(boolean approved, UUID reviewer, String comment, Instant now) {
-        if (status != Status.PENDIENTE) {
+        if (status != Status.PENDIENTE && status != Status.APELADA) {
             throw DomainException.conflict("La justificación ya fue revisada");
         }
         if (!approved && (comment == null || comment.isBlank())) {
@@ -145,9 +154,38 @@ public class AbsenceJustification {
         this.updatedAt = now;
     }
 
+    /**
+     * Apelación del estudiante. Una sola vez, solo si fue rechazada y dentro del plazo desde la decisión.
+     *
+     * @throws DomainException si no se puede apelar
+     */
+    public void appeal(String text, int windowDays, Instant now) {
+        if (status != Status.RECHAZADA) {
+            throw DomainException.conflict("Solo se puede apelar una justificación rechazada");
+        }
+        if (appealedAt != null) {
+            throw DomainException.conflict("La justificación ya fue apelada una vez");
+        }
+        if (reviewedAt != null && now.isAfter(reviewedAt.plus(java.time.Duration.ofDays(windowDays)))) {
+            throw DomainException.conflict("El plazo para apelar venció");
+        }
+        if (text == null || text.isBlank()) {
+            throw DomainException.badRequest("Explica por qué apelas la decisión");
+        }
+        this.appealText = text.trim();
+        this.appealedAt = now;
+        this.status = Status.APELADA;
+        this.updatedAt = now;
+    }
+
+    /** Pendiente de decisión del docente (primera vez o apelación). */
+    public boolean awaitsTeacher() {
+        return status == Status.PENDIENTE || status == Status.APELADA;
+    }
+
     /** Las pendientes pasan al nuevo docente si el grupo cambia de docente. */
     public void reassign(UUID teacher, Instant now) {
-        if (status == Status.PENDIENTE) {
+        if (awaitsTeacher()) {
             this.assignedTeacherId = teacher;
             this.updatedAt = now;
         }
