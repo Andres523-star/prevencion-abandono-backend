@@ -1,0 +1,43 @@
+# CD hacia Render. Staging se despliega solo cuando CI pasa en main; producción, a mano y con aprobación
+# del entorno "production" (revisores obligatorios en GitHub). Render corre las migraciones Flyway en el
+# preDeployCommand (MigrateMain) antes de cambiar el tráfico: si fallan, sigue sirviendo la versión anterior.
+# Secretos: RENDER_DEPLOY_HOOK_STAGING y RENDER_DEPLOY_HOOK_PRODUCTION (URL de deploy hook de cada servicio).
+# Asistido por IA (Claude, Anthropic). Ver BITACORA_IA.md.
+name: CD
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Ambiente
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' || github.event.inputs.environment == 'staging'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Desplegar en staging
+        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}"
+
+  production:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Desplegar en producción
+        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_PRODUCTION }}"

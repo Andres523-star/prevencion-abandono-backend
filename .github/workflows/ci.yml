@@ -39,7 +39,22 @@ jobs:
             target/failsafe-reports/
             target/site/jacoco/
             target/spring-modulith-docs/
+            target/perf/
           retention-days: 14
+      - name: SBOM (CycloneDX)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: target/bom.json
+          retention-days: 90
+      - name: Trivy (SBOM)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: sbom
+          scan-ref: target/bom.json
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
 
   secrets:
     name: Escaneo de secretos (gitleaks)

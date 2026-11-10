@@ -14,6 +14,11 @@ RUN ./mvnw -B -q package -DskipTests && \
     java -Djarmode=tools -jar target/retencion-backend-*.jar extract --layers --launcher --destination target/extracted
 
 FROM eclipse-temurin:21-jre-alpine
+LABEL org.opencontainers.image.title="retencion-backend" \
+      org.opencontainers.image.description="Backend de la plataforma de retención estudiantil" \
+      org.opencontainers.image.source="https://github.com/Andres523-star/prevencion-abandono-backend"
+# Sin herramientas de compilación ni shell de administración extra; parches de seguridad del sistema base.
+RUN apk upgrade --no-cache
 RUN addgroup -S app && adduser -S -G app -u 10001 app
 WORKDIR /app
 COPY --from=build --chown=app:app /workspace/target/extracted/dependencies/ ./

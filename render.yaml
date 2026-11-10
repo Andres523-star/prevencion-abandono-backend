@@ -32,11 +32,13 @@ services:
     region: virginia
     dockerfilePath: ./Dockerfile
     healthCheckPath: /actuator/health/readiness
-    autoDeployTrigger: checksPass
-    scaling:
-      minInstances: 1
-      maxInstances: 3
-      targetCPUPercent: 70
+    # El despliegue lo dispara el workflow de CD (deploy hook), no cada push.
+    autoDeployTrigger: "off"
+    # Migraciones controladas antes de cambiar el tráfico: si fallan, el despliegue se cancela.
+    preDeployCommand: java -cp "/app/BOOT-INF/classes:/app/BOOT-INF/lib/*" co.edu.retencion.common.ops.MigrateMain
+    # Una instancia mientras el tiempo real use el broker simple en memoria. Para escalar a varias,
+    # configurar RabbitMQ con rabbitmq_stomp y APP_REALTIME_BROKER=relay (ver docs/dimensionamiento.md).
+    numInstances: 1
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
@@ -63,6 +65,9 @@ services:
           property: password
       - key: DB_POOL_MAX
         value: "15"
+      # La app solo valida el esquema al arrancar; migra el preDeployCommand.
+      - key: APP_FLYWAY_MIGRATE_ON_STARTUP
+        value: "false"
       # --- Estado compartido entre instancias
       - key: APP_STATE_BACKEND
         value: redis
