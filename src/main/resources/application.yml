@@ -139,6 +139,10 @@ resilience4j:
         timeout-duration: 5s
   bulkhead:
     instances:
+      # Tomas de lista simultáneas; las demás esperan turno (sin conexión tomada) hasta max-wait-duration.
+      attendance:
+        max-concurrent-calls: ${APP_ATTENDANCE_MAX_CONCURRENT:10}
+        max-wait-duration: ${APP_ATTENDANCE_MAX_WAIT:60s}
       anthropic:
         max-concurrent-calls: ${AI_MAX_CONCURRENT_CALLS:8}
         max-wait-duration: 2s
@@ -271,8 +275,24 @@ app:
     heartbeat: 10s
     send-capacity: ${APP_REALTIME_SEND_PER_MINUTE:60}
     send-period: 1m
+  async:
+    # Hilos para los listeners de eventos (acotados para no agotar el pool de conexiones en un pico).
+    listener-threads: ${APP_ASYNC_LISTENER_THREADS:6}
+    queue-capacity: 200000
+  web:
+    # Cuerpo máximo de las peticiones que no son archivos (JSON); las subidas tienen su propio límite.
+    max-body-size: ${APP_MAX_BODY_SIZE:1MB}
+  flyway:
+    # En prod la app solo valida el esquema; migra MigrateMain antes del despliegue (preDeployCommand).
+    migrate-on-startup: ${APP_FLYWAY_MIGRATE_ON_STARTUP:true}
   analytics:
     # Refresca las vistas de analítica cuando hay cambios (y siempre, una vez por noche).
+    read:
+      # Réplica de lectura para gráficos, tablero y reportes (vacío = base principal).
+      url: ${APP_ANALYTICS_READ_URL:}
+      username: ${APP_ANALYTICS_READ_USER:}
+      password: ${APP_ANALYTICS_READ_PASSWORD:}
+      pool-size: ${APP_ANALYTICS_READ_POOL:5}
     refresh-enabled: ${APP_ANALYTICS_REFRESH_ENABLED:true}
     refresh-check-ms: 30000
   reports:

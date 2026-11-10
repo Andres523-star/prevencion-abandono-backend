@@ -15,3 +15,15 @@ app:
   state:
     # Con varias instancias, rate limit y estados de login deben compartirse en Redis.
     backend: ${APP_STATE_BACKEND:redis}
+  flyway:
+    migrate-on-startup: ${APP_FLYWAY_MIGRATE_ON_STARTUP:false}
+
+management:
+  endpoint:
+    health:
+      group:
+        # Render saca de servicio la instancia si la base o Redis no responden; la vida no depende de ellos.
+        readiness:
+          include: readinessState,db,redis
+        liveness:
+          include: livenessState
