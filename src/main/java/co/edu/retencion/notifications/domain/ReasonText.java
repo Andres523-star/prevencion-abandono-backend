@@ -24,7 +24,11 @@ public final class ReasonText {
             case JUSTIFICACION_PENDIENTE -> "Hay una justificación de falta pendiente de tu revisión" + in(reason);
             case JUSTIFICACION_DECIDIDA -> "Tu justificación" + in(reason) + " fue "
                     + (Boolean.TRUE.equals(reason.get("approved")) ? "aprobada" : "rechazada");
+            case JUSTIFICACION_APELADA -> "Un estudiante apeló una justificación que rechazaste" + in(reason);
             case NUEVO_MENSAJE -> "Tienes un mensaje nuevo en el chat";
+            case SOLICITUD_DATOS -> "Hay una solicitud de datos personales por responder ("
+                    + String.valueOf(reason.getOrDefault("type", "")) + ")";
+            case SOLICITUD_DATOS_RESPONDIDA -> "Tu solicitud sobre tus datos personales fue respondida";
             case INTERVENCION_ASIGNADA -> "Se te asignó una intervención de " + String.valueOf(reason.getOrDefault("type", "apoyo"))
                     .toLowerCase().replace('_', ' ');
             case SEGUIMIENTO_RETENCION -> "Seguimiento de retención a " + reason.getOrDefault("offsetDays", "") + " días pendiente";
