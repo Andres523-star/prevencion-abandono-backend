@@ -191,6 +191,8 @@ public class RiskOrchestrator {
             state.watch(now.plus(Duration.ofDays(watchDays)), "RIESGO_ALTO", now);
         }
         states.save(state);
+        io.micrometer.core.instrument.Metrics.counter("risk.assessments", "level", level.name(), "source",
+                saved.getSource().name(), "trigger", saved.getTrigger().name()).increment();
         events.publishEvent(new RiskAssessed(saved.getId(), saved.getStudentId(), level, previous, saved.getScore(),
                 saved.getScoreType(), saved.getSource(), saved.getTrigger(),
                 score.factors().stream().map(Factor::code).distinct().toList()));
