@@ -60,6 +60,18 @@ public final class TestDatabase {
         registry.add("spring.flyway.placeholders.appDbRole", () -> APP_ROLE);
     }
 
+    public String jdbcUrl() {
+        return jdbcUrl;
+    }
+
+    public String ownerUser() {
+        return ownerUser;
+    }
+
+    public String ownerPassword() {
+        return ownerPassword;
+    }
+
     /** Conexión como dueño (superusuario) para pruebas que simulan a un atacante con privilegios. */
     public Connection ownerConnection() throws SQLException {
         return DriverManager.getConnection(jdbcUrl, ownerUser, ownerPassword);
