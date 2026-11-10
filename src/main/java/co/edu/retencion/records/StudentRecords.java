@@ -38,6 +38,9 @@ public interface StudentRecords {
      */
     List<NearLimitRow> nearLimit(UUID termId, UUID after, int limit);
 
+    /** Faltas y tardanzas del estudiante, de la más reciente a la más antigua (portal). */
+    List<AbsenceInfo> absences(UUID studentId);
+
     /**
      * @param groupId   grupo
      * @param weekStart lunes de la semana

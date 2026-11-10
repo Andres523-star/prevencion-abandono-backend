@@ -23,6 +23,15 @@ public interface SupportPlans {
     /**
      * @param status PROPUESTO, APROBADO, RECHAZADO o REEMPLAZADO
      */
+    /**
+     * Planes APROBADOS por una persona, con el texto ya escrito para el estudiante (marcadores rellenos con
+     * su nombre y la materia). Sin nivel, puntaje ni factores: es lo que ve el propio estudiante.
+     */
+    java.util.List<StudentPlan> approvedForStudent(UUID studentId);
+
+    record StudentPlan(UUID id, String subjectName, String message, java.util.List<String> resourceIds, Instant approvedAt) {
+    }
+
     record PlanSummary(UUID id, UUID studentId, UUID enrollmentId, UUID groupId, String triggerLevel, String status,
                        List<PlanItem> actions, Instant createdAt) {
     }

@@ -185,6 +185,19 @@ public class SupportPlanService implements co.edu.retencion.risk.SupportPlans {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<StudentPlan> approvedForStudent(UUID studentId) {
+        return plans.findByStudentIdOrderByCreatedAtDesc(studentId).stream()
+                .filter(p -> p.getStatus() == SupportPlan.Status.APROBADO)
+                .map(p -> {
+                    PlanView v = view(p, true);
+                    return new StudentPlan(p.getId(), v.subjectName(), v.studentMessage(),
+                            v.actions().stream().map(PlanAction::resourceId).filter(java.util.Objects::nonNull).distinct()
+                                    .toList(), p.getReviewedAt());
+                }).toList();
+    }
+
+    @Override
     @Transactional
     public PlanSummary approveWithActions(UUID planId, List<PlanItem> actions, String comment, UUID reviewer) {
         SupportPlan plan = load(planId, AccessAction.WRITE);

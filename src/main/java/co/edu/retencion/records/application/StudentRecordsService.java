@@ -194,6 +194,20 @@ public class StudentRecordsService implements StudentRecords, co.edu.retencion.r
                         c.getMaxAbsences(), c.getLevel())).toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<co.edu.retencion.records.AbsenceInfo> absences(UUID studentId) {
+        return attendance.findByStudentIdOrderByRecordedAtDesc(studentId).stream()
+                .filter(r -> r.getStatus() != co.edu.retencion.records.AttendanceStatus.PRESENTE)
+                .map(r -> new co.edu.retencion.records.AbsenceInfo(r.getId(), r.getTermId(), r.getSessionId(),
+                        r.getEnrollmentId(), r.getStudentId(), r.getGroupId(),
+                        academic.findSession(r.getSessionId()).map(s -> s.date()).orElse(null), r.getStatus(),
+                        r.getJustification(), r.getJustificationDeadline()))
+                .sorted(java.util.Comparator.comparing(co.edu.retencion.records.AbsenceInfo::sessionDate,
+                        java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())))
+                .toList();
+    }
+
     /** Periodo más reciente no cerrado con inscripciones activas; si no hay, el más reciente. */
     private Optional<TermInfo> currentTerm(List<EnrollmentInfo> enrollments) {
         List<TermInfo> terms = enrollments.stream().map(EnrollmentInfo::termId).distinct()

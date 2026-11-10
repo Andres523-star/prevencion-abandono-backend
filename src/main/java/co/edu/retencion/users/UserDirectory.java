@@ -38,6 +38,12 @@ public interface UserDirectory {
     /** Enlace de la agenda de citas del docente (https, dominio permitido), si lo registró. */
     Optional<String> appointmentLink(UUID userId);
 
+    /** Nombre visible de un usuario del personal (p. ej. el docente en el portal del estudiante). */
+    Optional<String> displayName(UUID userId);
+
+    /** Desactiva la cuenta (supresión de datos del titular). */
+    void deactivate(UUID userId);
+
     /** Usuario con ese correo (se busca por blind index; el correo no se guarda en claro). */
     Optional<UUID> findIdByEmail(String email);
 

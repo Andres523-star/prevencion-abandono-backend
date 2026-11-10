@@ -60,6 +60,23 @@ public class UserDirectoryService implements UserDirectory {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<String> displayName(UUID userId) {
+        return users.findById(userId).map(co.edu.retencion.users.domain.User::getDisplayName)
+                .filter(n -> n != null && !n.isBlank());
+    }
+
+    @Override
+    @Transactional
+    public void deactivate(UUID userId) {
+        users.findById(userId).ifPresent(u -> {
+            u.changeStatus(co.edu.retencion.users.UserStatus.DISABLED, clock.instant());
+            users.save(u);
+            events.publishEvent(new co.edu.retencion.common.security.SessionRevoked(userId, null));
+        });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<UserAccount> findById(UUID userId) {
         return users.findById(userId).map(UserDirectoryService::toAccount);
     }
