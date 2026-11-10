@@ -92,6 +92,15 @@ public class AttendanceService {
     public record Entry(UUID enrollmentId, AttendanceStatus status) {
     }
 
+    /**
+     * Crea la partición del periodo de la sesión, si falta, <b>fuera</b> de la transacción de la toma de lista:
+     * así el bloqueo de creación dura una sola sentencia y las tomas de lista concurrentes del primer día de
+     * clases no esperan con la conexión tomada. Se llama antes de {@link #record}.
+     */
+    public void preparePartition(UUID sessionId) {
+        academic.findSession(sessionId).ifPresent(session -> partitions.ensure(session.termId()));
+    }
+
     @Transactional
     public List<AttendanceView> record(UUID sessionId, List<Entry> entries, String correctionReason) {
         AuthenticatedUser user = CurrentUser.require();
@@ -127,17 +136,28 @@ public class AttendanceService {
 
         List<AttendanceView> result = new ArrayList<>();
         Instant now = clock.instant();
+        // Una consulta para lo ya registrado de la sesión y una para los contadores que faltan, en vez de
+        // varias por estudiante (hallazgo de la prueba de pico de asistencia).
+        Map<UUID, AttendanceRecord> existing = records.findByTermIdAndSessionId(session.termId(), sessionId).stream()
+                .collect(Collectors.toMap(AttendanceRecord::getEnrollmentId, Function.identity()));
+        calculator.ensureCounters(enrolled.values(), group.id(), session.termId(), policy);
         for (Entry entry : entries) {
             EnrollmentInfo enrollment = Optional.ofNullable(enrolled.get(entry.enrollmentId()))
                     .orElseThrow(() -> DomainException.badRequest("La inscripción no pertenece al grupo de la sesión"));
-            AttendanceRecord record = records.findByTermIdAndSessionIdAndEnrollmentId(session.termId(), sessionId,
-                            enrollment.id())
+            AttendanceRecord record = Optional.ofNullable(existing.get(enrollment.id()))
                     .orElseGet(() -> AttendanceRecord.create(session.termId(), sessionId, enrollment.id(),
                             enrollment.studentId(), group.id(), now));
             AttendanceStatus previous = record.getStatus();
             boolean changed = record.mark(entry.status(), deadline, user.userId(), now);
             records.save(record);
             if (!changed) {
+                result.add(AttendanceView.of(record));
+                continue;
+            }
+            // Pasar de "sin registro" o PRESENTE a PRESENTE no cambia el contador: no hay que recalcularlo.
+            boolean affectsCounter = entry.status() != AttendanceStatus.PRESENTE
+                    || (previous != null && previous != AttendanceStatus.PRESENTE);
+            if (!affectsCounter) {
                 result.add(AttendanceView.of(record));
                 continue;
             }

@@ -94,6 +94,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .detail("El registro entra en conflicto con datos existentes"), request);
     }
 
+    /** Bulkhead lleno tras esperar: el servidor está saturado, no es un error del cliente ni del servidor. */
+    @ExceptionHandler(io.github.resilience4j.bulkhead.BulkheadFullException.class)
+    ResponseEntity<ProblemDetail> busy(io.github.resilience4j.bulkhead.BulkheadFullException ex,
+                                       jakarta.servlet.http.HttpServletRequest request) {
+        ResponseEntity<ProblemDetail> response = respond(catalog.create(ProblemCatalog.SERVICE_UNAVAILABLE), request);
+        return ResponseEntity.status(response.getStatusCode()).header("Retry-After", "30").body(response.getBody());
+    }
+
     @ExceptionHandler(Exception.class)
     ResponseEntity<ProblemDetail> handleUnexpected(Exception ex, HttpServletRequest request) {
         // Se registra la excepción completa (con request-id en el MDC) pero al cliente solo va un mensaje genérico.

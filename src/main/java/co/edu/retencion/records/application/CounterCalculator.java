@@ -38,6 +38,22 @@ class CounterCalculator {
         this.clock = clock;
     }
 
+    /**
+     * Crea en un solo paso los contadores que faltan de un grupo (en cero). Así la toma de lista no consulta
+     * contador por contador para los estudiantes presentes, que son la gran mayoría.
+     */
+    void ensureCounters(java.util.Collection<co.edu.retencion.students.EnrollmentInfo> enrollments, UUID groupId,
+                        UUID termId, EffectiveAttendancePolicy policy) {
+        java.util.Set<UUID> existing = new java.util.HashSet<>();
+        counters.findByGroupId(groupId).forEach(c -> existing.add(c.getEnrollmentId()));
+        List<AbsenceCounter> missing = enrollments.stream().filter(e -> !existing.contains(e.id()))
+                .map(e -> AbsenceCounter.empty(e.id(), e.studentId(), groupId, termId, policy.maxAbsences(), clock.instant()))
+                .toList();
+        if (!missing.isEmpty()) {
+            counters.saveAll(missing);
+        }
+    }
+
     CounterInfo recalculate(UUID enrollmentId, UUID studentId, UUID groupId, UUID termId,
                             EffectiveAttendancePolicy policy) {
         AbsenceCounter counter = counters.findForUpdate(enrollmentId).orElseGet(() -> counters.save(

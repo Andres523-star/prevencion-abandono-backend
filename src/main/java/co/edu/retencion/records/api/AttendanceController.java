@@ -37,8 +37,16 @@ import co.edu.retencion.records.application.RecordsViews.CounterView;
 public class AttendanceController {
 
     private final AttendanceService attendance;
+    /**
+     * Bulkhead de la toma de lista: en un pico (todos los docentes a la misma hora) limita cuántas se procesan a
+     * la vez para que las demás esperen turno sin tener tomada una conexión, en lugar de agotar el pool y fallar
+     * por timeout. Ver docs/dimensionamiento.md.
+     */
+    private final io.github.resilience4j.bulkhead.Bulkhead bulkhead;
 
-    public AttendanceController(AttendanceService attendance) {
+    public AttendanceController(AttendanceService attendance,
+                                io.github.resilience4j.bulkhead.BulkheadRegistry bulkheads) {
+        this.bulkhead = bulkheads.bulkhead("attendance");
         this.attendance = attendance;
     }
 
@@ -55,8 +63,11 @@ public class AttendanceController {
     @Operation(summary = "Registra o corrige la asistencia de la sesión (uno o todos los estudiantes del grupo)")
     public List<AttendanceView> record(@PathVariable UUID id, @Valid @RequestBody AttendanceRequest request,
                                        @RequestHeader(value = "X-Access-Reason", required = false) String reason) {
-        return attendance.record(id, request.entries().stream()
-                .map(e -> new AttendanceService.Entry(e.enrollmentId(), e.status())).toList(), reason);
+        return io.github.resilience4j.bulkhead.Bulkhead.decorateSupplier(bulkhead, () -> {
+            attendance.preparePartition(id);
+            return attendance.record(id, request.entries().stream()
+                    .map(e -> new AttendanceService.Entry(e.enrollmentId(), e.status())).toList(), reason);
+        }).get();
     }
 
     @GetMapping("/sessions/{id}/attendance")
