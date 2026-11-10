@@ -118,3 +118,46 @@ gráfico de filtros al azar más el tablero completo.
 - El caché de esta prueba está en memoria: Redis agrega un viaje de red que no se midió.
 - Falta repetirla sobre PostgreSQL gestionado de Render y con Redis (Fase 7).
 
+
+# Pico de asistencia (Fase 7)
+
+Escenario: **todos los docentes toman lista a la misma hora**. `AttendancePeakIT` elige la franja del periodo con más
+clases que terminan a la vez, asigna un docente real a cada grupo y registra cada sesión por HTTP contra el servidor.
+Luego verifica que no se perdió nada: una fila por inscripción en la partición del periodo, poda de particiones en
+el plan y contadores de faltas y tardanzas exactos. En `./mvnw verify` corre a escala reducida con un cliente
+concurrente; la escala completa usa Gatling (`perf/AttendancePeakSimulation`):
+
+```bash
+./mvnw verify -Dit.test=AttendancePeakIT -Dtest=NoSuchTest -Dsurefire.failIfNoSpecifiedTests=false -Dretencion.perf.students=50000 -Dretencion.perf.gatling=true -Dretencion.perf.ramp-seconds=300 -Dretencion.perf.teachers=200
+```
+
+## Resultados (2026-11-10, mismo portátil y PostgreSQL embebido)
+
+| Dato | Valor |
+|---|---|
+| Estudiantes / inscripciones / sesiones del periodo | 50.000 / 234.840 / 200.004 |
+| Franja | 612 tomas de lista de 200 docentes, enviadas dentro de 5 minutos |
+| Registros de asistencia escritos | 24.480 (2.026 faltas, 710 tardanzas), todos en la partición del periodo |
+| Fallidas | **0** |
+| p50 / p95 / p99 / máx. | 74 / **110** / 134 / 648 ms |
+| Eventos diferidos (correo, cola de riesgo, analítica) | completados al terminar la carga |
+
+**Ráfaga extrema** (escala reducida, 96 docentes enviando **en el mismo segundo**, 64 en vuelo): 0 fallas; p50
+6,1 s y p95 9,3 s porque el servidor procesa unas 8 tomas de lista por segundo en este equipo y las demás esperan
+turno en el bulkhead, sin conexión tomada. Una toma de lista sola tarda ~260 ms. El muestreo de `pg_stat_activity`
+muestra la CPU como límite y algo de espera en la cadena global de auditoría.
+
+## Hallazgos corregidos por esta prueba
+
+1. **Pool agotado por los listeners:** cada falta dispara varios eventos y, con hilos virtuales sin límite, cientos de
+   listeners pedían conexión a la vez y las tomas de lista fallaban por timeout (500). Ahora los listeners usan un
+   ejecutor de 6 hilos con cola (`APP_ASYNC_LISTENER_THREADS`).
+2. **Partición del primer día de clases:** se creaba dentro de la transacción de la primera toma de lista y su bloqueo
+   hacía esperar a las demás con su conexión tomada; además podía fallar con "la relación ya existe". Ahora se crea
+   antes de la transacción y la función tolera la carrera (migración V9).
+3. **Bulkhead de la toma de lista** (`APP_ATTENDANCE_MAX_CONCURRENT`, 10): el exceso espera turno; tras 60 s responde
+   503 con `Retry-After`.
+4. **Menos consultas por lista:** los registros de la sesión se cargan en una consulta, los contadores que faltan se
+   crean de una vez y solo se recalcula el contador si la marca afecta las faltas (bajó el p50 del pico de 25 s a 6 s).
+
+Pendiente: repetir sobre PostgreSQL gestionado de Render y con varias instancias (requiere el relay STOMP).

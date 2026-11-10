@@ -51,6 +51,8 @@ Pruebas completas (unitarias + integración + arquitectura + cobertura):
 | `analytics` | Indicadores agregados sobre vistas materializadas, supresión de celdas, caché en Redis y series históricas | `AnalyticsQueries`, `AnalyticsFilter`, `AnalyticsViewer`, `DropoutHistoryBook` |
 | `dashboard` | Pantalla inicial según el rol: totales, listas ALTO/MEDIO/BAJO y últimas notificaciones | solo REST |
 | `reports` | Reportes asíncronos en PDF y Excel (streaming) con aviso de confidencialidad y auditoría | solo REST |
+| `portal` | API del portal del estudiante: materias, faltas con su política, notas, historial y apoyo aprobado (sin etiquetas de riesgo) | solo REST |
+| `privacy` | Derechos del titular (consulta con copia de datos, rectificación, supresión en dos pasos) y registro de actividades de tratamiento | `DataRequestSubmitted`, `DataRequestAnswered`, `StudentDataSuppressed` |
 
 Capas por módulo: `api` → `application` → `domain` ← `infrastructure`. Límites verificados por
 `ModularityTest` (Modulith) y `ArchitectureRulesTest` (ArchUnit).
@@ -119,6 +121,11 @@ Capas por módulo: `api` → `application` → `domain` ← `infrastructure`. L�
 | `POST /api/v1/analytics/refresh` | ADMIN | Refresca las vistas de analítica |
 | `GET /api/v1/dashboard/summary`, `/dashboard/students` | personal y DOCENTE, según su alcance | Tablero y listas por nivel (keyset) |
 | `POST /api/v1/reports`, `GET /reports`, `/reports/{id}`, `/reports/{id}/download-url` | ADMIN, CONSEJERO, PSICOLOGO, COORDINADOR (identidad con `X-Access-Reason`) | Reportes asíncronos y URL prefirmada |
+| `GET /api/v1/portal/{overview,absences,support}` | ESTUDIANTE (sus datos) | Portal: materias, faltas, notas y apoyo |
+| `POST /api/v1/justifications/{id}/appeal` | ESTUDIANTE titular | Apelar una justificación rechazada (decide el docente) |
+| `POST/GET /api/v1/students/me/data-requests`, `GET /data-requests/{id}/export-url` | ESTUDIANTE | Consulta, rectificación y supresión de sus datos |
+| `GET /api/v1/privacy/data-requests`, `POST /privacy/data-requests/{id}/{approve,reject,execute}` | ADMIN | Atender solicitudes del titular (supresión: dos personas) |
+| `GET /api/v1/privacy/processing-activities` | autenticado | Registro de actividades de tratamiento |
 
 Errores siempre en `application/problem+json` con campo `code` estable.
 
@@ -128,6 +135,15 @@ Con 50.000 estudiantes y 7,5 millones de filas de asistencia, los gráficos y el
 bajo carga de Gatling (12.000 peticiones, 100 por segundo, sin errores; objetivo: 500 ms). Sin caché, la consulta más
 lenta tiene p95 de 62 ms. Medido en un portátil con PostgreSQL embebido; método, cifras y límites en
 [docs/rendimiento.md](docs/rendimiento.md).
+
+## Operación
+
+- **Despliegue:** Render con migraciones controladas en el `preDeployCommand` y CD por GitHub Actions
+  ([docs/despliegue.md](docs/despliegue.md)).
+- **Observabilidad:** sondas de salud, métricas Prometheus, tablero de Grafana, alertas y trazas OpenTelemetry
+  ([docs/observabilidad.md](docs/observabilidad.md)).
+- **Backups:** gestionados por Render más backup lógico cifrado con restauración probada ([docs/backups.md](docs/backups.md)).
+- **Incidentes:** [docs/runbook-incidentes.md](docs/runbook-incidentes.md). **Piloto:** [docs/checklist-piloto.md](docs/checklist-piloto.md).
 
 ## Documentación
 
@@ -141,4 +157,11 @@ lenta tiene p95 de 62 ms. Medido en un portátil con PostgreSQL embebido; métod
 - [Motor de riesgo e IA](docs/motor-de-riesgo.md) y [modelo predictivo propio](docs/modelo-predictivo.md) (`ml/train.py`)
 - [Tiempo real, alertas, campanita, chat, intervenciones y retención](docs/tiempo-real-y-retencion.md)
 - [Analítica, tablero y reportes](docs/analitica-y-reportes.md)
+- [Arquitectura (diagramas C4)](docs/arquitectura.md) y [catálogo de eventos](docs/eventos.md)
+- [Portal del estudiante](docs/portal-del-estudiante.md)
+- [Cumplimiento de la Ley 1581 y qué debe validar jurídica](docs/cumplimiento-ley-1581.md)
+- [Seguridad: revisión OWASP ASVS nivel 2](docs/seguridad-asvs.md)
+- [Dimensionamiento y escalabilidad](docs/dimensionamiento.md)
+- [Guía para conectar los datos reales](docs/conectar-datos-reales.md)
+- [Manual de configuración: reglas de riesgo y política de asistencia](docs/manual-configuracion.md)
 - Diagramas de módulos (PlantUML): `target/spring-modulith-docs/` tras `./mvnw verify`
