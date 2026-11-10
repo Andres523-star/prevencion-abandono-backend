@@ -37,7 +37,7 @@ import co.edu.retencion.students.StudentRegistry;
  * solo él) la aprueba o rechaza. Ningún otro rol decide y no hay aprobación automática.
  */
 @Service
-public class JustificationService {
+public class JustificationService implements co.edu.retencion.justifications.JustificationQueries {
 
     private final AbsenceJustificationRepository justifications;
     private final JustificationEvidenceRepository evidences;
@@ -46,10 +46,12 @@ public class JustificationService {
     private final StudentRegistry students;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final co.edu.retencion.settings.SettingsProvider settings;
 
     public JustificationService(AbsenceJustificationRepository justifications, JustificationEvidenceRepository evidences,
                                 AttendanceLedger ledger, AcademicDirectory academic, StudentRegistry students,
-                                ApplicationEventPublisher events, Clock clock) {
+                                ApplicationEventPublisher events, Clock clock,
+                                co.edu.retencion.settings.SettingsProvider settings) {
         this.justifications = justifications;
         this.evidences = evidences;
         this.ledger = ledger;
@@ -57,6 +59,7 @@ public class JustificationService {
         this.students = students;
         this.events = events;
         this.clock = clock;
+        this.settings = settings;
     }
 
     /** El estudiante justifica una de SUS faltas. */
@@ -85,8 +88,8 @@ public class JustificationService {
     /** Bandeja del docente: pendientes de sus grupos. */
     @Transactional(readOnly = true)
     public List<JustificationView> pendingForCurrentTeacher() {
-        return withEvidences(justifications.findByAssignedTeacherIdAndStatusOrderBySubmittedAtAsc(
-                CurrentUser.require().userId(), AbsenceJustification.Status.PENDIENTE));
+        return withEvidences(justifications.findByAssignedTeacherIdAndStatusInOrderBySubmittedAtAsc(
+                CurrentUser.require().userId(), java.util.EnumSet.of(AbsenceJustification.Status.PENDIENTE, AbsenceJustification.Status.APELADA)));
     }
 
     /** Detalle: estudiante titular, docente asignado o ADMIN. */
@@ -131,11 +134,33 @@ public class JustificationService {
                 evidences.findByJustificationIdOrderByUploadedAtAsc(id)), counter);
     }
 
+    /**
+     * Apelación del estudiante titular: la falta vuelve a quedar pendiente y el docente actual del grupo
+     * decide otra vez (con el mismo endpoint de decisión). Esa decisión es definitiva.
+     */
+    @Transactional
+    public JustificationView appeal(UUID id, String text) {
+        AuthenticatedUser user = CurrentUser.require();
+        AbsenceJustification justification = load(id);
+        boolean owner = students.findStudentIdByUser(user.userId()).map(justification.getStudentId()::equals).orElse(false);
+        if (!owner) {
+            throw new AccessDeniedException("Solo el estudiante titular puede apelar");
+        }
+        justification.appeal(text, settings.getInt("justifications.appeal-days", 5), clock.instant());
+        UUID teacher = academic.findGroup(justification.getGroupId()).map(GroupInfo::teacherUserId).orElse(null);
+        justification.reassign(teacher, clock.instant());
+        justifications.saveAndFlush(justification);
+        ledger.reopenJustification(justification.getAttendanceRecordId());
+        events.publishEvent(new co.edu.retencion.justifications.JustificationAppealed(id, justification.getStudentId(),
+                justification.getGroupId(), teacher));
+        return JustificationView.of(justification, evidences.findByJustificationIdOrderByUploadedAtAsc(id));
+    }
+
     /** Si el grupo cambia de docente, sus justificaciones pendientes pasan al nuevo docente. */
     @Transactional
     public int reassignPending(UUID groupId, UUID newTeacher) {
-        List<AbsenceJustification> pending = justifications.findByGroupIdAndStatus(groupId,
-                AbsenceJustification.Status.PENDIENTE);
+        List<AbsenceJustification> pending = justifications.findByGroupIdAndStatusIn(groupId,
+                java.util.EnumSet.of(AbsenceJustification.Status.PENDIENTE, AbsenceJustification.Status.APELADA));
         pending.forEach(j -> j.reassign(newTeacher, clock.instant()));
         return pending.size();
     }
@@ -144,6 +169,14 @@ public class JustificationService {
     @Transactional
     public int expireOverdue() {
         return ledger.expireOverdue(LocalDate.now(clock.withZone(TimeConfig.BUSINESS_ZONE)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<JustificationRecord> ofStudent(UUID studentId) {
+        return justifications.findByStudentIdOrderBySubmittedAtDesc(studentId).stream()
+                .map(j -> new JustificationRecord(j.getId(), j.getCategory().name(), j.getStatus().name(), j.getDescription(),
+                        j.getReviewComment(), j.getAppealText(), j.getSubmittedAt(), j.getReviewedAt())).toList();
     }
 
     AbsenceJustification load(UUID id) {
