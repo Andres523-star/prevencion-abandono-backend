@@ -63,6 +63,14 @@ public class AttendanceLedgerService implements AttendanceLedger {
 
     @Override
     @Transactional
+    public void reopenJustification(UUID recordId) {
+        AttendanceRecord record = load(recordId);
+        record.reopenJustification(clock.instant());
+        recalculate(record);
+    }
+
+    @Override
+    @Transactional
     public CounterInfo resolveJustification(UUID recordId, boolean approved) {
         AttendanceRecord record = load(recordId);
         record.resolveJustification(approved, clock.instant());

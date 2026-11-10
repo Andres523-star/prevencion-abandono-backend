@@ -18,6 +18,9 @@ public interface AttendanceLedger {
     /** El estudiante envió una justificación: la falta queda PENDIENTE (sigue contando). */
     void markJustificationPending(UUID recordId);
 
+    /** Apelación: la justificación rechazada vuelve a PENDIENTE hasta la nueva decisión del docente. */
+    void reopenJustification(UUID recordId);
+
     /** Decisión del docente: APROBADA (se descuenta) o RECHAZADA (cuenta como injustificada). */
     CounterInfo resolveJustification(UUID recordId, boolean approved);
 

@@ -128,6 +128,16 @@ public class AttendanceRecord {
         this.updatedAt = now;
     }
 
+    /** Apelación de una justificación rechazada: vuelve a quedar pendiente (sigue contando). */
+    public void reopenJustification(Instant now) {
+        requireAbsence();
+        if (justification != JustificationState.RECHAZADA) {
+            throw DomainException.conflict("Solo se puede apelar una justificación rechazada");
+        }
+        this.justification = JustificationState.PENDIENTE;
+        this.updatedAt = now;
+    }
+
     /** @return {@code true} si venció (falta sin justificar después del plazo) */
     public boolean expireIfOverdue(LocalDate today, Instant now) {
         if (status == AttendanceStatus.FALTA && justification == JustificationState.NINGUNA
