@@ -11,6 +11,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <gatling.version>3.13.5</gatling.version>
         <gatling-maven-plugin.version>4.15.0</gatling-maven-plugin.version>
+        <!-- Simulación a correr: -Dsimulation=retencion.AttendancePeakSimulation -->
+        <simulation>retencion.AnalyticsSimulation</simulation>
     </properties>
     <dependencies>
         <dependency>
@@ -32,7 +34,7 @@
                 <artifactId>gatling-maven-plugin</artifactId>
                 <version>${gatling-maven-plugin.version}</version>
                 <configuration>
-                    <simulationClass>retencion.AnalyticsSimulation</simulationClass>
+                    <simulationClass>${simulation}</simulationClass>
                 </configuration>
             </plugin>
         </plugins>
