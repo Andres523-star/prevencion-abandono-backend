@@ -91,6 +91,7 @@ public class InterventionController {
     }
 
     @GetMapping("/interventions/mine")
+    @PreAuthorize(STAFF)
     @Operation(summary = "Intervenciones de las que soy responsable")
     public List<InterventionView> mine() {
         return interventions.mine();
