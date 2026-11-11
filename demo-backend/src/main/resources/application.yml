@@ -1,0 +1,25 @@
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+
+spring:
+  application:
+    name: permanencia-demo
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+demo:
+  cors:
+    origins: ${DEMO_CORS_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173}
+  ai:
+    # Opcional: si existe una clave, el análisis se redacta con Claude. Sin clave se usa
+    # el motor de recomendaciones local (el demo funciona igual).
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: ${AI_MODEL:claude-sonnet-4-5}
+    base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+
+logging:
+  level:
+    co.edu.permanencia.demo: INFO
