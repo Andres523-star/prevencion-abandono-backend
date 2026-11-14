@@ -6,7 +6,7 @@ public final class OrdenamientoEstudiantes {
     private OrdenamientoEstudiantes() {}
 
     public static Comparator<Estudiante> porRiesgoDescendente() {
-        return Comparator.comparingInt(Estudiante::riesgo).reversed();
+        return Comparator.comparingInt(Estudiante::riesgoScore).reversed();
     }
 
     public static Comparator<Estudiante> porPromedioDescendente() {
