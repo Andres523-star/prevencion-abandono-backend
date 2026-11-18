@@ -62,16 +62,32 @@ public class AuthService {
         if (rolSeleccionado != null && !rolSeleccionado.isBlank() && !rolSeleccionado.equals(usuario.rol())) {
             throw ApiException.unauthorized("El rol seleccionado no corresponde a esta cuenta");
         }
-        // En la demo la sede elegida ajusta el alcance de los roles que trabajan por sede.
-        boolean sedeElegida = sedeSeleccionada != null && !sedeSeleccionada.isBlank()
-                && ("COORDINADOR_SEDE".equals(usuario.rol()) || "PROFESOR".equals(usuario.rol())
-                || "JEFE_PROGRAMA".equals(usuario.rol()));
-        if (sedeElegida) {
-            usuario = new Usuario(usuario.id(), usuario.nombre(), usuario.apellido(), usuario.email(),
-                    usuario.rol(), usuario.programa(), sedeSeleccionada.trim(), usuario.semestres(),
-                    usuario.facultad(), usuario.estudianteId());
+        // Cada cuenta está registrada en una sede: no puede entrar desde otra.
+        // El Rector es la única excepción porque su alcance es nacional.
+        String sedeElegida = sedeSeleccionada == null ? "" : sedeSeleccionada.trim();
+        boolean sedeBloqueada = !"RECTOR".equals(usuario.rol())
+                && usuario.sede() != null && !usuario.sede().isBlank()
+                && !sedeElegida.isBlank()
+                && !mismaSede(usuario.sede(), sedeElegida);
+        if (sedeBloqueada) {
+            throw ApiException.unauthorized(String.format(
+                    "Este correo está registrado en la sede %s. No puede iniciar sesión desde %s. "
+                            + "Selecciona %s para continuar.",
+                    usuario.sede(), sedeElegida, usuario.sede()));
         }
+        // El alcance se toma de la sede registrada en la cuenta, no de lo que escriba el usuario.
         return sesion(usuario);
+    }
+
+    /** Compara sedes ignorando mayúsculas, tildes y espacios sobrantes. */
+    private static boolean mismaSede(String registrada, String elegida) {
+        return normalizarSede(registrada).equals(normalizarSede(elegida));
+    }
+
+    private static String normalizarSede(String sede) {
+        String sinTildes = java.text.Normalizer.normalize(sede.trim(), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        return sinTildes.toLowerCase(Locale.ROOT);
     }
 
     public SesionResponse registrar(String nombre, String apellido, String email, String password, String rol) {
