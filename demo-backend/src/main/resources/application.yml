@@ -17,6 +17,9 @@ spring:
       write-dates-as-timestamps: false
 
 demo:
+  debug:
+    # Muestra en /api/salud la IP con la que el servidor ve al cliente (solo para comprobar el proxy).
+    client-ip: ${DEMO_DEBUG_CLIENT_IP:false}
   cors:
     origins: ${DEMO_CORS_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173}
   auth:
