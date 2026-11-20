@@ -495,7 +495,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- SBOM CycloneDX (target/bom.json) en cada build: inventario de dependencias para auditoría y escaneo. -->
+            <!-- SBOM CycloneDX en cada build (Spring Boot lo deja en target/classes/META-INF/sbom/application.cdx.json): inventario de dependencias para auditoría y escaneo. -->
             <plugin>
                 <groupId>org.cyclonedx</groupId>
                 <artifactId>cyclonedx-maven-plugin</artifactId>
