@@ -27,6 +27,13 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
+      # BackupRestoreIT corre los scripts reales de backup contra PostgreSQL 16 (Testcontainers). El runner trae
+      # un pg_dump más nuevo, que escribe parámetros (transaction_timeout) que la versión 16 no reconoce.
+      - name: Cliente de PostgreSQL 16 para la prueba de backup
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16
+          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
       - name: ./mvnw verify (unitarias, integración con Testcontainers, ArchUnit/Modulith, cobertura)
         run: ./mvnw -B verify
       - name: Reportes de pruebas
