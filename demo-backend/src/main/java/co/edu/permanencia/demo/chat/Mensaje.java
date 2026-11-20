@@ -14,6 +14,16 @@ public class Mensaje {
     private final String fecha;
     private final long timestamp;
     private boolean leido;
+    /** Firma con vencimiento para descargar el adjunto; se renueva cada vez que se entrega el mensaje. */
+    private volatile String archivoFirma;
+
+    public String getArchivoFirma() {
+        return archivoFirma;
+    }
+
+    public void setArchivoFirma(String archivoFirma) {
+        this.archivoFirma = archivoFirma;
+    }
 
     public Mensaje(long id, int estudianteId, String autor, String texto, String tipo, String nombreArchivo,
                    String mime, String archivoId, String fecha, long timestamp, boolean leido) {
