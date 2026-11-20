@@ -42,7 +42,10 @@
         <poi.version>5.5.1</poi.version>
         <openpdf.version>2.0.5</openpdf.version>
         <datafaker.version>2.7.0</datafaker.version>
-        <minio.version>8.5.17</minio.version>
+        <!-- 8.6.0 corrige CVE-2025-59952 (XML tag injection en el cliente). -->
+        <minio.version>8.6.0</minio.version>
+        <!-- Sobrescribe la versión de Spring Boot: 42.7.12+ corrige CVE-2026-54291. -->
+        <postgresql.version>42.7.14</postgresql.version>
         <anthropic.version>3.4.0</anthropic.version>
         <onnxruntime.version>1.31.1</onnxruntime.version>
         <json-schema-validator.version>1.5.9</json-schema-validator.version>
@@ -196,6 +199,13 @@
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
             <version>${minio.version}</version>
+        </dependency>
+        <!-- minio 8.6 trae OkHttp 5, cuyo artefacto "okhttp" es multiplataforma y en Maven llega sin clases:
+             las clases de la JVM están en okhttp-jvm. También lo usa el cliente del SDK de Anthropic. -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-jvm</artifactId>
+            <version>5.1.0</version>
         </dependency>
 
         <!-- Motor de riesgo e IA (Fase 4): SDK oficial de Anthropic, validación de la salida con
