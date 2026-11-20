@@ -6,14 +6,25 @@ import org.springframework.http.HttpStatus;
 public class ApiException extends RuntimeException {
 
     private final HttpStatus status;
+    private final long retryAfterSeconds;
 
     public ApiException(HttpStatus status, String message) {
+        this(status, message, 0);
+    }
+
+    private ApiException(HttpStatus status, String message, long retryAfterSeconds) {
         super(message);
         this.status = status;
+        this.retryAfterSeconds = retryAfterSeconds;
     }
 
     public HttpStatus getStatus() {
         return status;
+    }
+
+    /** Segundos que el cliente debe esperar antes de reintentar (cabecera Retry-After); 0 si no aplica. */
+    public long getRetryAfterSeconds() {
+        return retryAfterSeconds;
     }
 
     public static ApiException badRequest(String message) {
@@ -34,5 +45,10 @@ public class ApiException extends RuntimeException {
 
     public static ApiException conflict(String message) {
         return new ApiException(HttpStatus.CONFLICT, message);
+    }
+
+    /** Demasiados intentos: 429 con la espera sugerida. */
+    public static ApiException tooManyRequests(String message, long retryAfterSeconds) {
+        return new ApiException(HttpStatus.TOO_MANY_REQUESTS, message, Math.max(1, retryAfterSeconds));
     }
 }
