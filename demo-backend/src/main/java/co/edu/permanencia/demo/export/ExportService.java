@@ -341,6 +341,12 @@ public class ExportService {
 
     private List<Estudiante> filtrar(Usuario usuario, String carrera, String sede, String facultad,
                                      Integer semestre, String grupo, String riesgo) {
+        // Una cuenta de estudiante solo exporta su propio registro. Antes el CSV y el ZIP le
+        // entregaban a todos los compañeros de su programa y sede, con cédula, correo y teléfono.
+        if (usuario != null && "ESTUDIANTE".equals(usuario.rol())) {
+            Integer propio = usuario.estudianteId();
+            return propio == null ? List.of() : List.of(estudiantes.porId(propio));
+        }
         return estudiantes.listar(null, Alcance.carrera(usuario, carrera),
                 Alcance.sede(usuario, sede), Alcance.facultad(usuario, facultad), semestre,
                 Alcance.semestres(usuario, semestre), null, riesgo, null, grupo, null);
