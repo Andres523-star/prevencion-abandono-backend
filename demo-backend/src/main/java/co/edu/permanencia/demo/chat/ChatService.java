@@ -131,13 +131,11 @@ public class ChatService {
             if (bytes.length > MAX_ADJUNTO) {
                 throw ApiException.badRequest("El archivo no puede superar 5 MB");
             }
-            if (!archivoPermitido(request.mime(), request.nombreArchivo())) {
-                throw ApiException.badRequest("Solo se permiten PDF, Word o audio");
-            }
+            // El tipo sale del contenido real, no de lo que declara el navegador.
+            ValidadorAdjuntos.Adjunto validado = ValidadorAdjuntos.validar(bytes, request.nombreArchivo());
             archivoId = UUID.randomUUID().toString();
-            nombreArchivo = request.nombreArchivo() == null ? "archivo" : request.nombreArchivo();
-            mime = request.mime() == null || request.mime().isBlank()
-                    ? "application/octet-stream" : request.mime();
+            nombreArchivo = validado.nombre();
+            mime = validado.mime();
             adjuntos.put(archivoId, new Adjunto(bytes, nombreArchivo, mime));
             tipo = "ARCHIVO";
         }
@@ -363,21 +361,6 @@ public class ChatService {
                 "Ese esfuerzo se nota. Sigamos así y revisemos las notas del próximo corte."
         };
         return respuestas[random.nextInt(respuestas.length)];
-    }
-
-    private static boolean archivoPermitido(String mime, String nombreArchivo) {
-        if (mime != null && (mime.startsWith("audio/") || mime.equals("application/pdf")
-                || mime.equals("application/msword")
-                || mime.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))) {
-            return true;
-        }
-        if (nombreArchivo == null) {
-            return false;
-        }
-        String nombre = nombreArchivo.toLowerCase(java.util.Locale.ROOT);
-        return nombre.endsWith(".pdf") || nombre.endsWith(".doc") || nombre.endsWith(".docx")
-                || nombre.endsWith(".mp3") || nombre.endsWith(".m4a") || nombre.endsWith(".ogg")
-                || nombre.endsWith(".webm") || nombre.endsWith(".wav");
     }
 
     @PreDestroy
