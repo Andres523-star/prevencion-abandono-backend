@@ -51,12 +51,13 @@ salvo el registro (pide sede y programa) y los adjuntos del chat (enlace firmado
 | `DEMO_LOGIN_MAX_FAILURES_IP` | `30` | Fallos desde una IP (15 min) |
 | `DEMO_REGISTER_MAX_PER_IP_HOUR` | `30` | Cuentas nuevas por IP por hora |
 | `DEMO_CORS_ORIGINS` | localhost de Vite | Orígenes permitidos (sin comodines) |
+| `DEMO_DEBUG_CLIENT_IP` | `false` | Muestra en `/api/salud` la IP que ve el servidor (solo para comprobar el proxy) |
 
 ## Lo que sigue siendo de demo
 
-- La IP real del cliente depende del proxy del hosting: si su IP no está en los rangos de confianza
-  de Tomcat, todos los usuarios comparten una IP y los topes por IP se alcanzan antes. Verificarlo
-  en el despliegue y ajustar las variables de arriba.
+- La IP real del cliente depende del proxy del hosting. En Railway se configura
+  `SERVER_TOMCAT_REMOTEIP_INTERNALPROXIES=.*` (comprobado que su borde sobrescribe las cabeceras de
+  reenvío; ver `DESPLIEGUE_RAILWAY.md`). En otro hosting, verificarlo con `DEMO_DEBUG_CLIENT_IP=true`.
 
 - Las cuentas de la demo y sus contraseñas están publicadas en el README a propósito (repositorio
   público para presentaciones). No reutilizar esas contraseñas en otro sistema.

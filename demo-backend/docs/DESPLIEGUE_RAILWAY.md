@@ -27,6 +27,7 @@ se construyen con su `Dockerfile` (Railway lo detecta solo).
   PORT=8080
   DEMO_POBLACION=200000
   DEMO_CORS_ORIGINS=https://frontend-production-d28c0668.up.railway.app
+  SERVER_TOMCAT_REMOTEIP_INTERNALPROXIES=.*
   ANTHROPIC_API_KEY=<la pone una persona del equipo; nunca en el repositorio>
   ```
 
@@ -65,6 +66,12 @@ de la demo funcionan igual con cualquier población.
 
 - Una sola réplica: sesiones, cuentas registradas y chat viven en memoria; con varias réplicas cada
   una tendría los suyos, y al reiniciar o redesplegar se pierden.
-- La IP real del cliente (para los límites de intentos) llega por `X-Forwarded-For` desde el proxy
-  de Railway; si los límites por IP saltan para todos a la vez, ajustar
-  `DEMO_LOGIN_MAX_FAILURES_IP` y `DEMO_REGISTER_MAX_PER_IP_HOUR` (ver `SEGURIDAD_DEMO.md`).
+- **IP real del cliente (límites de intentos).** El borde de Railway se conecta desde IP públicas que
+  cambian entre peticiones (no están en los rangos internos que Tomcat trae por defecto), así que sin
+  configurar nada cada intento parecía venir de otra IP y el bloqueo por correo + IP nunca saltaba.
+  `SERVER_TOMCAT_REMOTEIP_INTERNALPROXIES=.*` hace que Tomcat tome la IP de `X-Forwarded-For`.
+  Es seguro **solo detrás de Railway**: se comprobó (2026-11-20) que su borde sobrescribe
+  `X-Forwarded-For` y `X-Real-IP`, de modo que un cliente no puede falsearlas, y el servicio no
+  tiene otra entrada pública. No usar ese valor en un hosting sin un proxy que sobrescriba esas
+  cabeceras. Para volver a comprobarlo: `DEMO_DEBUG_CLIENT_IP=true` muestra en `/api/salud` la IP que
+  ve el servidor (apagarlo después).
