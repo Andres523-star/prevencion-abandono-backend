@@ -3,54 +3,40 @@ package co.edu.permanencia.demo.risk;
 import co.edu.permanencia.demo.students.Estudiante;
 import co.edu.permanencia.demo.students.EstudianteService;
 import co.edu.permanencia.demo.students.NotaMateria;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
+import java.util.Optional;
 
 /**
  * Genera el plan de acción que el profesor ve al hacer clic en "Analizar con IA".
  *
- * <p>Si existe ANTHROPIC_API_KEY, el párrafo se redacta con Claude; si no, se usa un motor local
- * con reglas por categoría. En ambos casos se envían solo datos académicos y la causa, nunca la
- * cédula ni el correo.</p>
+ * <p>Si existe ANTHROPIC_API_KEY, el párrafo se redacta con Claude (Sonnet 5.5 por defecto, vía
+ * {@link ClienteClaude}); si no, se usa un motor local con reglas por categoría.</p>
+ *
+ * <p>Privacidad (regla 2 del proyecto): a la IA llegan solo datos académicos por lista blanca
+ * ({@link #datosParaIa}): nivel, puntaje, programa, semestre, promedio, faltas, categoría y las
+ * acciones sugeridas. Nunca el nombre, la cédula, el correo, el teléfono ni la sede. El motivo
+ * (texto libre) solo se envía si {@code demo.ai.free-text-enabled=true}, y redactado.</p>
  */
 @Service
 public class AnalisisService {
 
-    private static final Logger log = LoggerFactory.getLogger(AnalisisService.class);
-
     private final EstudianteService estudiantes;
-    private final ObjectMapper mapper;
-    private final String apiKey;
-    private final String modelo;
-    private final String baseUrl;
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+    private final ClienteClaude claude;
+    private final boolean textoLibre;
 
-    public AnalisisService(EstudianteService estudiantes, ObjectMapper mapper,
-                           @Value("${demo.ai.api-key:}") String apiKey,
-                           @Value("${demo.ai.model:claude-sonnet-4-5}") String modelo,
-                           @Value("${demo.ai.base-url:https://api.anthropic.com}") String baseUrl) {
+    public AnalisisService(EstudianteService estudiantes, ClienteClaude claude,
+                           @Value("${demo.ai.free-text-enabled:false}") boolean textoLibre) {
         this.estudiantes = estudiantes;
-        this.mapper = mapper;
-        this.apiKey = apiKey;
-        this.modelo = modelo;
-        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        this.claude = claude;
+        this.textoLibre = textoLibre;
     }
 
     public AnalisisResponse analizar(int estudianteId) {
@@ -59,15 +45,11 @@ public class AnalisisService {
         String recomendacion = generarParrafo(e, acciones);
         String fuente = "Motor de recomendaciones local";
 
-        if (apiKey != null && !apiKey.isBlank()) {
-            try {
-                String claude = pedirAClaude(e, acciones);
-                if (claude != null && !claude.isBlank()) {
-                    recomendacion = claude;
-                    fuente = "Claude · " + modelo;
-                }
-            } catch (Exception ex) {
-                log.warn("No se pudo usar Claude, se mantiene el motor local: {}", ex.getMessage());
+        if (claude.disponible()) {
+            Optional<String> redactado = claude.redactar(datosParaIa(e, acciones, textoLibre));
+            if (redactado.isPresent()) {
+                recomendacion = redactado.get();
+                fuente = "Claude · " + claude.modelo();
             }
         }
 
@@ -136,46 +118,26 @@ public class AnalisisService {
                 e.razon(), pasos);
     }
 
-    private String pedirAClaude(Estudiante e, List<String> acciones) throws Exception {
-        String prompt = """
-                Eres un asesor de permanencia universitaria. Redacta en español un párrafo breve
-                (máximo 120 palabras) para un profesor que debe acompañar a un estudiante.
-                No inventes datos ni uses el nombre del estudiante. Incluye tres pasos concretos.
-
-                Datos del caso:
-                - Riesgo: %s (score %d/100)
-                - Programa: %s, semestre %d
-                - Promedio: %.1f; faltas: %d
-                - Categoría: %s
-                - Motivo: %s
-                - Acciones sugeridas: %s
-                """.formatted(e.riesgoActual(), e.riesgoScore(), e.carrera(), e.semestre(), e.promedio(),
-                e.faltas(), e.categoria(), e.razon(), String.join("; ", acciones));
-
-        Map<String, Object> cuerpo = Map.of(
-                "model", modelo,
-                "max_tokens", 600,
-                "messages", List.of(Map.of("role", "user", "content", prompt)));
-
-        HttpRequest request = HttpRequest.newBuilder(URI.create(baseUrl + "/v1/messages"))
-                .timeout(Duration.ofSeconds(25))
-                .header("x-api-key", apiKey)
-                .header("anthropic-version", "2023-06-01")
-                .header("content-type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(cuerpo)))
-                .build();
-
-        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() / 100 != 2) {
-            log.warn("Claude respondió con estado {}", response.statusCode());
-            return null;
+    /**
+     * Datos del caso para la IA, armados por lista blanca de campos (nunca por lista negra).
+     *
+     * <p>Las acciones sugeridas solo mencionan materias y servicios de la universidad. El motivo
+     * es texto libre escrito por personas: por defecto no se envía, y si se habilita pasa por
+     * {@link RedactorPii} (correos, teléfonos, documentos, enlaces y el nombre del estudiante).</p>
+     */
+    static String datosParaIa(Estudiante e, List<String> acciones, boolean incluirTextoLibre) {
+        StringBuilder sb = new StringBuilder("Datos del caso (seudonimizados):\n");
+        sb.append(String.format(Locale.US, "- Riesgo: %s (puntaje %d/100)%n", e.riesgoActual(), e.riesgoScore()));
+        sb.append(String.format(Locale.US, "- Programa: %s, semestre %d%n", e.carrera(), e.semestre()));
+        sb.append(String.format(Locale.US, "- Promedio: %.1f; faltas: %d%n", e.promedio(), e.faltas()));
+        sb.append(String.format(Locale.US, "- Categoría principal: %s%n", e.categoria()));
+        if (incluirTextoLibre) {
+            String motivo = RedactorPii.redactar(e.razon(), e.nombre(), e.apellido());
+            if (!motivo.isBlank()) {
+                sb.append("- Motivo reportado (redactado): ").append(motivo).append('\n');
+            }
         }
-        JsonNode root = mapper.readTree(response.body());
-        JsonNode contenido = root.path("content");
-        if (contenido.isArray() && !contenido.isEmpty()) {
-            String texto = contenido.get(0).path("text").asText("");
-            return texto.isBlank() ? null : texto.trim();
-        }
-        return null;
+        sb.append("- Acciones sugeridas: ").append(String.join("; ", acciones));
+        return sb.toString();
     }
 }

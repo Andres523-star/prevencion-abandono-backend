@@ -1,0 +1,10 @@
+# Excepciones del escaneo de Trivy, aprobadas por el equipo (2026-11-20). Cada una lleva su justificación y
+# vence: al vencer, Trivy vuelve a reportarla y el CI falla hasta revisarla de nuevo.
+
+# spring-webmvc 6.2.19 (última versión gratuita de Spring Framework 6.2). Solo hay corrección en Spring 7
+# (Spring Boot 4), que es una migración mayor pendiente. No es explotable en esta aplicación:
+# - CVE-2026-47884: ejecución remota vía XsltView. El proyecto no usa XsltView ni vistas XSLT.
+# - CVE-2026-47890: corrupción de streams Server-Sent Events con vistas. El proyecto no usa SSE
+#   (el tiempo real va por WebSocket/STOMP).
+CVE-2026-47884 exp:2027-03-31
+CVE-2026-47890 exp:2027-03-31

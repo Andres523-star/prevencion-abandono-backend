@@ -27,6 +27,21 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
+      # BackupRestoreIT corre los scripts reales de backup contra PostgreSQL 16 (Testcontainers). El runner trae
+      # un pg_dump más nuevo, que escribe parámetros (transaction_timeout) que la versión 16 no reconoce, y su
+      # Ubuntu ya no ofrece el paquete del cliente 16. Se usa el cliente de la imagen oficial postgres:16: los
+      # scripts solo pasan datos por tuberías y se conectan por URL, así que funciona igual dentro de Docker.
+      - name: Cliente de PostgreSQL 16 para la prueba de backup
+        run: |
+          docker pull -q postgres:16-alpine
+          mkdir -p "$RUNNER_TEMP/pg16"
+          for herramienta in pg_dump pg_restore psql; do
+            printf '#!/bin/sh\nexec docker run --rm -i --network host postgres:16-alpine %s "$@"\n' "$herramienta" \
+              > "$RUNNER_TEMP/pg16/$herramienta"
+            chmod +x "$RUNNER_TEMP/pg16/$herramienta"
+          done
+          echo "$RUNNER_TEMP/pg16" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/pg16/pg_dump" --version
       - name: ./mvnw verify (unitarias, integración con Testcontainers, ArchUnit/Modulith, cobertura)
         run: ./mvnw -B verify
       - name: Reportes de pruebas
@@ -45,16 +60,41 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sbom
-          path: target/bom.json
+          path: target/classes/META-INF/sbom/application.cdx.json
           retention-days: 90
       - name: Trivy (SBOM)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: sbom
-          scan-ref: target/bom.json
+          scan-ref: target/classes/META-INF/sbom/application.cdx.json
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: "1"
+          trivyignores: .trivyignore
+
+  demo:
+    name: Demo backend (pruebas)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: demo-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: ./mvnw test (incluye la prueba de que ningún payload a la IA lleva datos personales)
+        run: ./mvnw -B test
+      - name: Reportes de pruebas del demo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes-demo
+          path: demo-backend/target/surefire-reports/
+          retention-days: 14
 
   secrets:
     name: Escaneo de secretos (gitleaks)
@@ -74,7 +114,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Trivy (dependencias, secretos y configuración)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -82,6 +122,7 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: "1"
+          trivyignores: .trivyignore
 
   image:
     name: Imagen Docker
@@ -92,9 +133,10 @@ jobs:
       - name: docker build
         run: docker build -t retencion-backend:${{ github.sha }} .
       - name: Trivy (imagen)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: retencion-backend:${{ github.sha }}
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: "1"
+          trivyignores: .trivyignore

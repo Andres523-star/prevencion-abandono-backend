@@ -1,6 +1,12 @@
 server:
   port: ${PORT:8080}
   shutdown: graceful
+  # Detrás del proxy de Render, Tomcat toma la IP y el esquema reales de X-Forwarded-* solo si
+  # el proxy es de confianza (red interna). Así el límite de intentos usa la IP del cliente.
+  forward-headers-strategy: native
+  error:
+    include-message: never
+    include-stacktrace: never
 
 spring:
   application:
@@ -11,14 +17,37 @@ spring:
       write-dates-as-timestamps: false
 
 demo:
+  debug:
+    # Muestra en /api/salud la IP con la que el servidor ve al cliente (solo para comprobar el proxy).
+    client-ip: ${DEMO_DEBUG_CLIENT_IP:false}
   cors:
     origins: ${DEMO_CORS_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173}
+  auth:
+    # La sesión vence tras este tiempo sin uso y, en todo caso, tras la vida máxima.
+    session-idle-minutes: ${DEMO_SESSION_IDLE_MINUTES:120}
+    session-max-hours: ${DEMO_SESSION_MAX_HOURS:12}
+    # Topes de intentos en 15 minutos. Las cuentas de la demo son compartidas: el tope estricto es
+    # por correo + IP para que nadie bloquee una cuenta pública para todo el salón.
+    login-max-failures-per-ip-and-email: ${DEMO_LOGIN_MAX_FAILURES_IP_EMAIL:5}
+    login-max-failures-per-email: ${DEMO_LOGIN_MAX_FAILURES_EMAIL:50}
+    login-max-failures-per-ip: ${DEMO_LOGIN_MAX_FAILURES_IP:30}
+    # Cuentas nuevas por IP por hora (un salón detrás de un mismo NAT comparte IP).
+    register-max-per-ip-hour: ${DEMO_REGISTER_MAX_PER_IP_HOUR:30}
+  chat:
+    # Secreto para firmar los enlaces de descarga de adjuntos (mínimo 32 caracteres).
+    # Sin él se genera uno aleatorio al arrancar.
+    link-secret: ${DEMO_CHAT_LINK_SECRET:}
+    link-minutes: ${DEMO_CHAT_LINK_MINUTES:60}
   ai:
     # Opcional: si existe una clave, el análisis se redacta con Claude. Sin clave se usa
     # el motor de recomendaciones local (el demo funciona igual).
     api-key: ${ANTHROPIC_API_KEY:}
-    model: ${AI_MODEL:claude-sonnet-4-5}
+    model: ${AI_MODEL:claude-sonnet-5-5}
     base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:30}
+    # El "motivo" del estudiante es texto libre. Por defecto NO se envía a la IA (regla 2 de
+    # privacidad del proyecto); si se activa, pasa antes por el redactor de datos personales.
+    free-text-enabled: ${AI_FREE_TEXT_ENABLED:false}
 
 logging:
   level:

@@ -140,12 +140,18 @@ public class DataRequestService {
     /**
      * Ejecutar una solicitud aprobada. La rectificación registra lo corregido (la corrección se hace con los
      * endpoints de cada módulo). La supresión borra los datos personales y avisa a los demás módulos.
+     *
+     * <p>Tras una supresión no se publica {@link DataRequestAnswered}: la cuenta queda desactivada y el aviso
+     * de la campanita volvería a ligarla a la persona después del borrado. Además, los listeners corren en
+     * paralelo, así que ese aviso podía crearse después de que {@link StudentDataSuppressed} purgara la
+     * campanita (lo detectó {@code PrivacyIT} en CI). La respuesta queda en la solicitud y en la auditoría.</p>
      */
     @Transactional
     public RequestView execute(AuthenticatedUser admin, UUID id, String note) {
         DataSubjectRequest r = load(id);
         r.execute(admin.userId(), note, clock.instant());
-        if (r.getType() == DataSubjectRequest.Type.SUPRESION) {
+        boolean supresion = r.getType() == DataSubjectRequest.Type.SUPRESION;
+        if (supresion) {
             UUID user = students.suppressPersonalData(r.getStudentId()).orElse(null);
             if (user != null) {
                 users.deactivate(user);
@@ -155,7 +161,9 @@ public class DataRequestService {
                     Map.of("requestId", id.toString()));
         }
         requests.save(r);
-        answered(r);
+        if (!supresion) {
+            answered(r);
+        }
         return view(r);
     }
 

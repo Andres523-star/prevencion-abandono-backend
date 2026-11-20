@@ -22,6 +22,8 @@ ADMIN_DATABASE_URL=postgresql://usuario:clave@host:5432/postgres BACKUP_PASSPHRA
 
 1. Verifica la suma SHA-256, crea una base **nueva** y restaura (nunca sobre la base en uso).
 2. El rol de la aplicación (`DB_APP_ROLE`) debe existir en el servidor de destino: los roles no viajan en el dump.
+   Usa `pg_dump`/`pg_restore` de la **misma versión mayor** que el servidor (16): un cliente más nuevo escribe
+   parámetros, como `transaction_timeout` en la versión 17, que un servidor 16 rechaza al restaurar.
 3. Comprueba `GET /api/v1/audit/verify` sobre la base restaurada y las cifras de control (estudiantes, auditoría).
 4. Apunta el servicio a la base nueva cambiando `DB_*` en Render; las claves `APP_CRYPTO_*` deben ser las mismas o
    los datos cifrados no se podrán leer.

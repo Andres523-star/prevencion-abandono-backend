@@ -27,7 +27,7 @@ reiniciar. Los marcados con `@Externalized` salen a RabbitMQ cuando `APP_RABBIT_
 | `RetentionFollowUpDue` | retention | notifications | Recordatorio de seguimiento o reingreso |
 | `RetentionCaseChanged` | retention | analytics | Refresco del embudo |
 | `DataRequestSubmitted` | privacy | notifications | Aviso a quienes atienden solicitudes |
-| `DataRequestAnswered` | privacy | notifications | Aviso al titular |
+| `DataRequestAnswered` | privacy | notifications | Aviso al titular (no se publica tras una supresión: la cuenta queda desactivada) |
 | `StudentDataSuppressed` | privacy | chat, notifications | Purgar chats y campanita del titular |
 
 Ningún evento lleva nombres, documentos, correos ni texto libre: solo ids, códigos y cifras.
