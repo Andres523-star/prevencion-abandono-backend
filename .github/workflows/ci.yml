@@ -28,12 +28,20 @@ jobs:
           java-version: "21"
           cache: maven
       # BackupRestoreIT corre los scripts reales de backup contra PostgreSQL 16 (Testcontainers). El runner trae
-      # un pg_dump más nuevo, que escribe parámetros (transaction_timeout) que la versión 16 no reconoce.
+      # un pg_dump más nuevo, que escribe parámetros (transaction_timeout) que la versión 16 no reconoce, y su
+      # Ubuntu ya no ofrece el paquete del cliente 16. Se usa el cliente de la imagen oficial postgres:16: los
+      # scripts solo pasan datos por tuberías y se conectan por URL, así que funciona igual dentro de Docker.
       - name: Cliente de PostgreSQL 16 para la prueba de backup
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client-16
-          echo "/usr/lib/postgresql/16/bin" >> "$GITHUB_PATH"
+          docker pull -q postgres:16-alpine
+          mkdir -p "$RUNNER_TEMP/pg16"
+          for herramienta in pg_dump pg_restore psql; do
+            printf '#!/bin/sh\nexec docker run --rm -i --network host postgres:16-alpine %s "$@"\n' "$herramienta" \
+              > "$RUNNER_TEMP/pg16/$herramienta"
+            chmod +x "$RUNNER_TEMP/pg16/$herramienta"
+          done
+          echo "$RUNNER_TEMP/pg16" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/pg16/pg_dump" --version
       - name: ./mvnw verify (unitarias, integración con Testcontainers, ArchUnit/Modulith, cobertura)
         run: ./mvnw -B verify
       - name: Reportes de pruebas
