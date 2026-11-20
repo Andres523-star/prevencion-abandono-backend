@@ -63,7 +63,13 @@ public class EstudianteController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Estudiante crear(@RequestBody EstudianteRequest request) {
+    public Estudiante crear(@RequestBody EstudianteRequest request,
+                            @RequestAttribute(name = "usuario", required = false) Usuario usuario) {
+        // Una cuenta de estudiante solo consulta sus propios datos: no registra estudiantes.
+        if (usuario == null || "ESTUDIANTE".equals(usuario.rol())) {
+            throw co.edu.permanencia.demo.common.ApiException.forbidden(
+                    "Tu cuenta no puede registrar estudiantes");
+        }
         return estudiantes.crear(request);
     }
 }
