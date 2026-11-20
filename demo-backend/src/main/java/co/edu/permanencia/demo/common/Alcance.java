@@ -12,8 +12,14 @@ import java.util.List;
  * su programa y su sede completos; el coordinador de sede ve toda una sede; el decano ve una
  * facultad completa en todas las sedes; el rector no tiene restricción. El estudiante solo se ve a
  * sí mismo.</p>
+ *
+ * <p><b>Falla cerrado</b> (como el ABAC del backend principal): si a una cuenta con alcance
+ * restringido le falta el programa, la sede o la facultad que la delimitan, se responde 403 en
+ * lugar de mostrarle todo, y un rol desconocido no ve nada.</p>
  */
 public final class Alcance {
+
+    private static final String SIN_ALCANCE = "Tu cuenta no tiene un alcance asignado. Contacta al administrador.";
 
     private Alcance() {
     }
@@ -24,9 +30,9 @@ public final class Alcance {
             return solicitada;
         }
         return switch (usuario.rol()) {
-            case "PROFESOR", "JEFE_PROGRAMA", "ESTUDIANTE" ->
-                    texto(usuario.programa()) ? solicitada : usuario.programa();
-            default -> solicitada;
+            case "PROFESOR", "JEFE_PROGRAMA", "ESTUDIANTE" -> requerido(usuario.programa());
+            case "COORDINADOR_SEDE", "DECANO", "RECTOR" -> solicitada;
+            default -> throw ApiException.forbidden(SIN_ALCANCE);
         };
     }
 
@@ -36,10 +42,10 @@ public final class Alcance {
             return solicitada;
         }
         return switch (usuario.rol()) {
-            case "PROFESOR", "JEFE_PROGRAMA", "COORDINADOR_SEDE", "ESTUDIANTE" ->
-                    texto(usuario.sede()) ? solicitada : usuario.sede();
+            case "PROFESOR", "JEFE_PROGRAMA", "COORDINADOR_SEDE", "ESTUDIANTE" -> requerido(usuario.sede());
             // El decano ya no se limita a una sede: su alcance es la facultad completa.
-            default -> solicitada;
+            case "DECANO", "RECTOR" -> solicitada;
+            default -> throw ApiException.forbidden(SIN_ALCANCE);
         };
     }
 
@@ -49,9 +55,17 @@ public final class Alcance {
             return solicitada;
         }
         return switch (usuario.rol()) {
-            case "DECANO" -> texto(usuario.facultad()) ? solicitada : usuario.facultad();
-            default -> solicitada;
+            case "DECANO" -> requerido(usuario.facultad());
+            case "PROFESOR", "JEFE_PROGRAMA", "COORDINADOR_SEDE", "ESTUDIANTE", "RECTOR" -> solicitada;
+            default -> throw ApiException.forbidden(SIN_ALCANCE);
         };
+    }
+
+    private static String requerido(String valor) {
+        if (texto(valor)) {
+            throw ApiException.forbidden(SIN_ALCANCE);
+        }
+        return valor;
     }
 
     /** Semestres que el profesor dicta (null = todos). */
@@ -103,7 +117,7 @@ public final class Alcance {
             case "JEFE_PROGRAMA" -> igual(usuario.programa(), programa) && igual(usuario.sede(), sede);
             case "COORDINADOR_SEDE" -> igual(usuario.sede(), sede);
             case "DECANO" -> igual(usuario.facultad(), facultad);
-            default -> true;
+            default -> false;
         };
     }
 
@@ -116,8 +130,9 @@ public final class Alcance {
                 && usuario.estudianteId() != null && usuario.estudianteId() == estudianteId;
     }
 
+    /** Un alcance vacío no cubre nada (falla cerrado). */
     private static boolean igual(String alcance, String valor) {
-        return texto(alcance) || (valor != null && alcance.equalsIgnoreCase(valor));
+        return !texto(alcance) && valor != null && alcance.equalsIgnoreCase(valor);
     }
 
     private static boolean texto(String valor) {
